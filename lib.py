@@ -9,16 +9,15 @@ def hex_to_string(bytearr):
 # Color formatting
 #
 def cstring(msg, color=None):
-    colors = {"g/blk":"\x1b[1;32;40m",
-              "w/blk":"\x1b[0;37;40m",
-              "w/blu":"\x1b[1;37;44m",
-              "g/blu":"\x1b[1;32;44m",
-              "g/whi":"\x1b[1;32;47m"
+    colors = {"grn":"\033[1;32m",
+              "blu":"\033[1;34m",
+              "prp":"\033[1;35m",
+              "whi":"\033[1;37m"
               }
     if os.name == "nt":
         return msg
     else:
-        formatted = f"{colors[color]}{msg}\x1b[0m" if color else f"{colors['w/blk']}{msg}\x1b[0m"
+        formatted = f"{colors[color]}{msg}\033[1;m" if color else f"{colors['whi']}{msg}\033[1;m"
         return formatted
 # Other
 def print_title():
@@ -31,5 +30,5 @@ def print_title():
 | \____/     /_/   /_____/  \__,_/   /_/   \__/    |
 ----------------------------------------------------                                
 """
-    print(cstring(title.rstrip(), "g/blk"))
+    print(cstring(title.rstrip(), "prp"))
     print("---------A CLI Save Editor for Generation 4---------")
