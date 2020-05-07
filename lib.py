@@ -32,6 +32,6 @@ def print_title():
 | / /_/ /  /__  __/ / /___  / /_/ /   / /  / /_    |
 | \____/     /_/   /_____/  \__,_/   /_/   \__/    |
 ----------------------------------------------------
-"""
+""".lstrip()
     print(cstring(title.rstrip(), "prp"))
     print(cstring("---------A CLI Save Editor for Generation 4---------", 'prp'))
