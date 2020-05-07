@@ -22,10 +22,10 @@ class trainer:
             "first_header": get_padded(f"Trainer: {lib.cstring(self.name, color='blu')}/{lib.cstring(self.gender, color='blu')}"),
             "first_id": f"Trainer ID:{''.join([' ' for _ in range(14 - len('Trainer ID:'))])}{lib.cstring(self.trainer_id, color='blu')}",
             "second_id": f"Secret ID:{''.join([' ' for _ in range(14 - len('Secret ID:'))])}{lib.cstring(self.secret_id, color='blu')}",
-            "money": f"Money:{''.join([' ' for _ in range(14 - len('Money:'))])}{lib.cstring('$' + str(self.money), color='grn')}",
+            "money": f"Money:{''.join([' ' for _ in range(14 - len('Money:'))])}{lib.cstring('$' + str(self.money), color='blu')}",
             "second_header": f"{get_padded('Game Progress')}",
             "badge_lines": f"{lib.cstring(self.name, color='blu')} has {', '.join(self.badges)}\n",
-            "prog_bar": f"{lib.cstring(self.gym_progress[0], color='grn')} => {lib.cstring(self.gym_progress[1], color='grn')}",
+            "prog_bar": f"{lib.cstring(self.gym_progress[0], color='blu')} => {lib.cstring(self.gym_progress[1], color='blu')}",
             'border': (''.join(['-' for _ in range(52)])) + '\n'}
         full_display = "\n".join([lines[x] for x in list(lines.keys())])
         print(full_display)
