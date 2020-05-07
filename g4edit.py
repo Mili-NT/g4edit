@@ -15,6 +15,8 @@ def main(filepath=None):
     else:
         filepath = input("Enter the path to the .sav file: ")
         playersav = load_file(filepath)
+    lib.print_title()
+    playersav.player.display_trainer_info()
 # RUNPOINT
 if __name__ == '__main__':
     try:
