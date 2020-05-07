@@ -1,19 +1,20 @@
 #!/usr/bin/python3
-import classes
-import requests
+import lib
 import sys
+import classes
+# TODO: Interface
+# TODO: Items and Inventory
+# TODO: Party and Pokemon
 # IMPORTANT FUNCTIONS
 def load_file(fp):
-    with open(fp, "rb") as f:
-        return classes.save(f.read())
+    with open(fp, "rb+") as f:
+        return classes.save(f.read(), f)
 def main(filepath=None):
     if filepath:
         playersav = load_file("filepath")
     else:
         filepath = input("Enter the path to the .sav file: ")
         playersav = load_file(filepath)
-    playersav.player.display_trainer_info()
-
 # RUNPOINT
 if __name__ == '__main__':
     try:
