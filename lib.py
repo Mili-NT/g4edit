@@ -1,5 +1,13 @@
 #!/usr/bin/python3
 import os
+# Variables
+colors = {"grn": "\033[1;32m",
+          "blu": "\033[7;34;47m",
+          "prp": "\033[5;37;45m",
+          "whi": "\033[1;37m",
+          "end":"\033[1;m",
+          }
+# Misc
 def bytearr_to_hexstring(bytearr):
     return ' '.join([f'{i:0>2X}' for i in bytearr])
 def hex_to_string(bytearr):
@@ -9,15 +17,10 @@ def hex_to_string(bytearr):
 # Color formatting
 #
 def cstring(msg, color=None):
-    colors = {"grn":"\033[1;32m",
-              "blu":"\033[1;34m",
-              "prp":"\033[1;35m",
-              "whi":"\033[1;37m"
-              }
     if os.name == "nt":
         return msg
     else:
-        formatted = f"{colors[color]}{msg}\033[1;m" if color else f"{colors['whi']}{msg}\033[1;m"
+        formatted = f"{colors[color]}{msg}{colors['end']}" if color else f"{colors['whi']}{msg}{colors['end']}"
         return formatted
 # Other
 def print_title():
@@ -30,5 +33,5 @@ def print_title():
 | \____/     /_/   /_____/  \__,_/   /_/   \__/    |
 ----------------------------------------------------                                
 """
-    print(cstring(title.rstrip(), "blu"))
+    print(cstring(title.rstrip(), "prp"))
     print("---------A CLI Save Editor for Generation 4---------")

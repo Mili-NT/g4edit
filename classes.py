@@ -12,12 +12,15 @@ class trainer:
             self.gym_progress = trainer_info["gym_progress"]
     def display_trainer_info(self):
         def get_padded(string):
-            diff = 52 - len(string)
+            uncolored = string
+            for c in lib.colors.values():
+                uncolored = uncolored.replace(c, "")
+            diff = 52 - len(uncolored)
             perside = ''.join(['-' for _ in range(diff // 2)])
-            pad = f"{perside}{string}{perside}"
+            pad = f"{perside}{uncolored}{perside}"
             while len(pad) < 52:
                 pad = f"{pad}-"
-            return pad
+            return pad.replace(uncolored, string)
         lines = {
             "first_header": get_padded(f"Trainer: {lib.cstring(self.name, color='blu')}/{lib.cstring(self.gender, color='blu')}"),
             "first_id": f"Trainer ID:{''.join([' ' for _ in range(14 - len('Trainer ID:'))])}{lib.cstring(self.trainer_id, color='blu')}",
