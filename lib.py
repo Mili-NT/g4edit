@@ -22,7 +22,7 @@ def cstring(msg, color=None):
         return formatted
 # Other
 def print_title():
-    title = cstring("""
+    title = """
 ----------------------------------------------------
 |    ______   __ __    ______      __    _    __   |
 |   / ____/  / // /   / ____/ ____/ /   (_)  / /_  |
@@ -30,6 +30,6 @@ def print_title():
 | / /_/ /  /__  __/ / /___  / /_/ /   / /  / /_    |
 | \____/     /_/   /_____/  \__,_/   /_/   \__/    |
 ----------------------------------------------------                                
-""", "g/blk")
-    full = f"{title}\n---------A CLI Save Editor for Generation 4---------  "
-    print(full)
+"""
+    print(cstring(title.rstrip(), "g/blk"))
+    print("---------A CLI Save Editor for Generation 4---------")
