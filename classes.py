@@ -10,18 +10,22 @@ class trainer:
             self.money = trainer_info["money"]
             self.gym_progress = trainer_info["gym_progress"]
     def display_trainer_info(self):
+        """
+        TODO: sweet dear jesus fix this
+        """
         lines = {
-            "first_header":f"-----Trainer: {lib.cstring(self.name, color='w/blu')}/{lib.cstring(self.gender, color='w/blu')}-----",
+            "first_header":f"Trainer: {lib.cstring(self.name, color='w/blu')}/{lib.cstring(self.gender, color='w/blu')}",
             "first_id":f"Trainer ID:{''.join([' ' for _ in range(14-len('Trainer ID:'))])}{lib.cstring(self.trainer_id, color='w/blu')}",
             "second_id":f"Secret ID:{''.join([' ' for _ in range(14-len('Secret ID:'))])}{lib.cstring(self.secret_id, color='w/blu')}",
             "money":f"Money:{''.join([' ' for _ in range(14-len('Money:'))])}{lib.cstring('$' + str(self.money), color='g/blu')}",
             "badge_lines":f"{lib.cstring(self.name, color='w/blu')} has {', '.join(self.badges)}\n",
             "prog_bar":f"{lib.cstring(self.gym_progress[0], color='g/blu')} => {lib.cstring(self.gym_progress[1], color='w/blu')}"
         }
-
-        lines['border'] = (''.join(['-' for _ in range(len(f"-----{lines['first_header']}-----") + 5)])) + '\n'
-        lines['head_pad'] = ''.join(['-' for _ in range((len(lines['first_header']) - len('Game Progress')) // 2)])
-        lines['second_header'] = f"{lines['head_pad']}Game Progress{lines['head_pad']}"
+        lines['border'] = (''.join(['-' for _ in range(len(f"{lines['first_header']}") + 20)])) + '\n'
+        lines['first_pad'] = ''.join(['-' for _ in range((len(lines['border']) - len(lines['first_header'])) // 2)])
+        lines['first_header'] = f"{lines['first_pad']}{lines['first_header']}{lines['first_pad']}"
+        lines['second_header'] = f"{lines['first_header'].split('Trainer:')[0]}Game Progress"
+        lines['second_header'] = f"{lines['second_header']}{''.join(['-' for _ in range((len(lines['first_header'])) - len(lines['second_header']))])}"
         full_display = f"""{lines['border']}{lines['first_header']}\n{lines['first_id']}\n{lines['second_id']}\n{lines['money']}\n{lines['second_header']}\n{lines['badge_lines']}\n{lines['prog_bar']}\n{lines['border']}"""
         print(full_display)
 class save:

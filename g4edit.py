@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import classes
+import requests
 import sys
 # IMPORTANT FUNCTIONS
 def load_file(fp):
@@ -7,11 +8,12 @@ def load_file(fp):
         return classes.save(f.read())
 def main(filepath=None):
     if filepath:
-        playersav = load_file(filepath)
+        playersav = load_file("filepath")
     else:
         filepath = input("Enter the path to the .sav file: ")
         playersav = load_file(filepath)
     playersav.player.display_trainer_info()
+
 # RUNPOINT
 if __name__ == '__main__':
     try:
