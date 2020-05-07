@@ -15,7 +15,7 @@ class trainer:
             "first_id":f"Trainer ID:{''.join([' ' for _ in range(14-len('Trainer ID:'))])}{lib.cstring(self.trainer_id, color='w/blu')}",
             "second_id":f"Secret ID:{''.join([' ' for _ in range(14-len('Secret ID:'))])}{lib.cstring(self.secret_id, color='w/blu')}",
             "money":f"Money:{''.join([' ' for _ in range(14-len('Money:'))])}{lib.cstring('$' + str(self.money), color='g/blu')}",
-            "badge_lines":f"{lib.cstring(self.name, color='w/blu')} has {', '.join(self.badges)}",
+            "badge_lines":f"{lib.cstring(self.name, color='w/blu')} has {', '.join(self.badges)}\n",
             "prog_bar":f"{lib.cstring(self.gym_progress[0], color='g/blu')} => {lib.cstring(self.gym_progress[1], color='w/blu')}"
         }
 
