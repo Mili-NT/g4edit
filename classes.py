@@ -53,16 +53,27 @@ class save:
             64: "Icicle",
             128: "Beacon",
         }
+        badge_to_color = {
+            "Coal Badge": "\x1b[1;30;40",
+            "Forest Badge": "\x1b[1;37;42",
+            "Cobble Badge": "\x1b[1;37;41",
+            "Fen Badge": "\x1b[1;37;44",
+            "Relic Badge": "\x1b[1;37;45",
+            "Mine Badge": "\x1b[2;33;40",
+            "Icicle Badge": "\x1b[1;37;46",
+            "Beacon Badge": "\x1b[1;37;43",
+        }
         badge_counts = {y:x+1 for x, y in enumerate([sum(list(badge_dict.keys())[:-x]) if x != 0
                                                         else sum(list(badge_dict.keys())) for x in reversed(range(8))])}
         if value in badge_dict.keys():
-            return [f"{badge_dict[value]} Badge"]
+            badgelist = [f"{badge_dict[value]} Badge"]
         elif value in badge_counts.keys():
-            return [f"{list(badge_dict.values())[x]} Badge" for x in range(badge_counts[value])]
+            badgelist = [f"{list(badge_dict.values())[x]} Badge" for x in range(badge_counts[value])]
         else:
             combos = list(itertools.chain.from_iterable(itertools.combinations(list(badge_dict.keys()), r) for r in range(len(list(badge_dict.keys()))+1)))[1:]
             combolist = {sum(list(sublist)):list(sublist) for sublist in combos}
-            return [f"{badge_dict[x]} Badge" for x in combolist[value]]
+            badgelist = [f"{badge_dict[x]} Badge" for x in combolist[value]]
+        return [f"{badge_to_color[x]}{x}\x1b[0m" for x in badgelist]
     def get_party_info(self):
         party_size = self.smallblock[0x9C]
     def get_trainer_info(self):

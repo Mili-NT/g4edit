@@ -30,5 +30,5 @@ def print_title():
 | \____/     /_/   /_____/  \__,_/   /_/   \__/    |
 ----------------------------------------------------                                
 """
-    print(cstring(title.rstrip(), "prp"))
+    print(cstring(title.rstrip(), "blu"))
     print("---------A CLI Save Editor for Generation 4---------")
