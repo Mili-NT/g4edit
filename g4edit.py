@@ -11,7 +11,7 @@ def load_file(fp):
         return classes.save(f.read(), f)
 def main(filepath=None):
     if filepath:
-        playersav = load_file("filepath")
+        playersav = load_file(filepath)
     else:
         filepath = input("Enter the path to the .sav file: ")
         playersav = load_file(filepath)
