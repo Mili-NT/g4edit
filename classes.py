@@ -1,6 +1,17 @@
 import lib
 import itertools
+from platform import system
 
+class interface:
+    def __init__(self, saveobj):
+        self.save = saveobj
+        self.header = lib.get_title()
+        self.general_info = self.save.player.display_trainer_info()
+        print(self.header)
+        print(self.general_info)
+class party:
+    def __init__(self, partyinfo):
+        self.party_number = partyinfo['party_number']
 class trainer:
     def __init__(self, trainer_info):
             self.name = trainer_info["name"]
@@ -15,10 +26,10 @@ class trainer:
             uncolored = string
             for c in lib.colors.values():
                 uncolored = uncolored.replace(c, "")
-            diff = 52 - len(uncolored)
+            diff = 56 - len(uncolored)
             perside = ''.join(['-' for _ in range(diff // 2)])
             pad = f"{perside}{uncolored}{perside}"
-            while len(pad) < 52:
+            while len(pad) < 56:
                 pad = f"{pad}-"
             return pad.replace(uncolored, string)
         lines = {
@@ -29,19 +40,17 @@ class trainer:
             "second_header": f"{get_padded('Game Progress')}",
             "badge_lines": f"{lib.cstring(self.name, color='blu')} has {', '.join(self.badges)}\n",
             "prog_bar": f"{lib.cstring(self.gym_progress[0], color='blu')} => {lib.cstring(self.gym_progress[1], color='blu')}",
-            'border': (''.join(['-' for _ in range(52)])) + '\n'}
-        full_display = "\n".join([lines[x] for x in list(lines.keys())])
-        print(full_display)
+            'border': (''.join(['-' for _ in range(56)])) + '\n'}
+        return "\n".join([lines[x] for x in list(lines.keys())])
 class save:
-    def __init__(self, savedata, fileobj):
-        self.file = fileobj
+    def __init__(self, savedata):
         self.allblocks = bytearray(savedata)
         self.smallblock = self.allblocks[0x00000:0x0CF2B]
         self.bigblock = self.allblocks[0x0CF2C:0x1F10F]
         self.smallblock_backup = self.allblocks[(0x00000 + 0x40000):(0x0CF2B + 0x40000)]
         self.bigblock_backup = self.allblocks[(0x0CF2C + 0x40000):(0x1F10F + 0x40000)]
         self.player = self.get_trainer_info()
-    def update(self, offset, bytestr):
+    def update_value(self, offset, bytestr):
         self.allblocks[(offset[0]):(offset[1])] = bytestr
         self.player = self.get_trainer_info()
     def get_badge_info(self):
@@ -66,8 +75,7 @@ class save:
             "Icicle Badge": "\033[1;37;46m",
             "Beacon Badge": "\033[1;37;43m",
         }
-        badge_counts = {y:x+1 for x, y in enumerate([sum(list(badge_dict.keys())[:-x]) if x != 0
-                                                        else sum(list(badge_dict.keys())) for x in reversed(range(8))])}
+        badge_counts = {y:x+1 for x, y in enumerate([sum(list(badge_dict.keys())[:-x]) if x != 0 else sum(list(badge_dict.keys())) for x in reversed(range(8))])}
         if value in badge_dict.keys():
             badgelist = [f"{badge_dict[value]} Badge"]
         elif value in badge_counts.keys():
@@ -76,7 +84,10 @@ class save:
             combos = list(itertools.chain.from_iterable(itertools.combinations(list(badge_dict.keys()), r) for r in range(len(list(badge_dict.keys()))+1)))[1:]
             combolist = {sum(list(sublist)):list(sublist) for sublist in combos}
             badgelist = [f"{badge_dict[x]} Badge" for x in combolist[value]]
-        return [f"{badge_to_color[x]}{x}\033[1;m" for x in badgelist]
+        if system().lower() == "windows":
+            return badgelist
+        else:
+            return [f"{badge_to_color[x]}{x}\033[1;m" for x in badgelist]
     def get_party_info(self):
         party_size = self.smallblock[0x9C]
     def get_trainer_info(self):
