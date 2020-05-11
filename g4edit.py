@@ -1,8 +1,7 @@
 #!/usr/bin/python3
-import lib
 import sys
 import classes
-# TODO: Interface
+# TODO: Interface and Text Wrapping
 # TODO: Items and Inventory
 # TODO: Party and Pokemon
 # IMPORTANT FUNCTIONS
