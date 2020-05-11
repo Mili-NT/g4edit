@@ -66,9 +66,9 @@ class pokemon:
         split = [self.blocks[i:i + 2] for i in range(0, len(self.blocks), 2) if len(self.blocks[i:i + 2]) > 1]
         decrypted_bytes = []
         currentseed = self.checksum
-        for twobytes in split:
-            newbytes = lib.xor_bytes(twobytes, bytes(rand(currentseed)))
-            decrypted_bytes.append(newbytes)
+        for y in split:
+            unencrypted_byte = lib.xor_bytes(y, bytes(rand(currentseed)))
+            decrypted_bytes.append(unencrypted_byte)
             currentseed = rand(currentseed)
 
         blocks = bytearray()
