@@ -1,16 +1,17 @@
-import lib
+import misc
 import string
 import itertools
 from platform import system
+import data_functions as df
 
 class interface:
     def __init__(self, saveobj):
         self.save = saveobj
-        self.header = lib.get_title()
+        self.header = misc.get_title()
         self.general_info = self.save.player.display_trainer_info()
         print(self.header)
         print(self.general_info)
-        pokemon(self.save.smallblock[0xA0:0x628][0:236]).decrypt()
+        df.decrypt_pokemon(self.save.smallblock[0xA0:0x628][0:236])
 
 class pokemon:
     def __init__(self, data_block):
@@ -21,65 +22,7 @@ class pokemon:
         self.personality_value = data_block[0x00:0x04]
         self.unused = data_block[0x04:0x06]
         self.checksum = int.from_bytes(data_block[0x06:0x08], "little")
-
-    def shuffle(self, chunk, order):
-        shift_value = ((int.from_bytes(self.personality_value, "little") & 0x3E000) >> 0xD) % 24
-        shift_value = f"0{shift_value}" if shift_value < 10 else str(shift_value)
-        # Shifts stored with shift_value:(block order, inverse) format
-        shifts = {
-                '00':('ABCD','ABCD'),
-                '01':('ABDC','ABDC'),
-                '02':('ACBD','ACBD'),
-                '03':('ACDB','ADBC'),
-                '04':('ADBC','ACDB'),
-                '05':('ADCB','ADCB'),
-                '06':('BACD','BACD'),
-                '07':('BADC','BADC'),
-                '08':('BCAD','CABD'),
-                '09':('BCDA','DABC'),
-                '10':('BDAC','CADB'),
-                '11':('BDCA','DACB'),
-                '12':('CABD','BCAD'),
-                '13':('CADB','BDAC'),
-                '14':('CBAD','CBAD'),
-                '15':('CBDA','DBAC'),
-                '16':('CDAB','CDAB'),
-                '17':('CDBA','DCAB'),
-                '18':('DABC','BCDA'),
-                '19':('DACB','BDCA'),
-                '20':('DBAC','CBDA'),
-                '21':('DBCA','DBCA'),
-                '22':('DCAB','CDBA'),
-                '23':('DCBA','DCBA'),
-                }
-        # A=0, B=1, C=2, D=3
-        blocks = [bytearray(chunk[0:32]), bytearray(chunk[32:64]),
-                  bytearray(chunk[64:96]), bytearray(chunk[96:128])]
-        block_order = (shifts[shift_value][1] if order == "inverse" else shifts[shift_value][0]).lower()
-        combined_blocks = []
-        for index in [string.ascii_lowercase.index(x) for x in block_order]:
-            combined_blocks.extend(blocks[index])
-        return bytearray(combined_blocks)
-    def decrypt(self):
-        def rand(seed):
-            return (0x41C64E6D * seed + 0x00006073) >> (len(bin(0x41C64E6D * seed + 0x00006073)[2:]) - 16)
-        split = [self.blocks[i:i + 2] for i in range(0, len(self.blocks), 2) if len(self.blocks[i:i + 2]) > 1]
-        decrypted_bytes = []
-        currentseed = self.checksum
-        for y in split:
-            unencrypted_byte = lib.xor_bytes(y, bytes(rand(currentseed)))
-            decrypted_bytes.append(unencrypted_byte)
-            currentseed = rand(currentseed)
-
-        blocks = bytearray()
-        for x in decrypted_bytes:
-            blocks += x
-        print(blocks)
-        pkmn = self.shuffle(blocks, "inverse")
-
-
-
-
+        self.sv = ((int.from_bytes(self.personality_value, "little") & 0x3E000) >> 0xD) % 24
 
 class party:
     def __init__(self, party_block):
@@ -104,7 +47,7 @@ class trainer:
     def display_trainer_info(self):
         def get_padded(string):
             uncolored = string
-            for c in lib.colors.values():
+            for c in misc.colors.values():
                 uncolored = uncolored.replace(c, "")
             diff = 56 - len(uncolored)
             perside = ''.join(['-' for _ in range(diff // 2)])
@@ -113,13 +56,13 @@ class trainer:
                 pad = f"{pad}-"
             return pad.replace(uncolored, string)
         lines = {
-            "first_header": get_padded(f"Trainer: {lib.cstring(self.name, color='blu')}/{lib.cstring(self.gender, color='blu')}"),
-            "first_id": f"Trainer ID:{''.join([' ' for _ in range(14 - len('Trainer ID:'))])}{lib.cstring(self.trainer_id, color='blu')}",
-            "second_id": f"Secret ID:{''.join([' ' for _ in range(14 - len('Secret ID:'))])}{lib.cstring(self.secret_id, color='blu')}",
-            "money": f"Money:{''.join([' ' for _ in range(14 - len('Money:'))])}{lib.cstring('$' + str(self.money), color='blu')}",
+            "first_header": get_padded(f"Trainer: {misc.cstring(self.name, color='blu')}/{misc.cstring(self.gender, color='blu')}"),
+            "first_id": f"Trainer ID:{''.join([' ' for _ in range(14 - len('Trainer ID:'))])}{misc.cstring(self.trainer_id, color='blu')}",
+            "second_id": f"Secret ID:{''.join([' ' for _ in range(14 - len('Secret ID:'))])}{misc.cstring(self.secret_id, color='blu')}",
+            "money": f"Money:{''.join([' ' for _ in range(14 - len('Money:'))])}{misc.cstring('$' + str(self.money), color='blu')}",
             "second_header": f"{get_padded('Game Progress')}",
-            "badge_lines": f"{lib.cstring(self.name, color='blu')} has {', '.join(self.badges)}\n",
-            "prog_bar": f"{lib.cstring(self.gym_progress[0], color='blu')} => {lib.cstring(self.gym_progress[1], color='blu')}",
+            "badge_lines": f"{misc.cstring(self.name, color='blu')} has {', '.join(self.badges)}\n",
+            "prog_bar": f"{misc.cstring(self.gym_progress[0], color='blu')} => {misc.cstring(self.gym_progress[1], color='blu')}",
             'border': (''.join(['-' for _ in range(56)])) + '\n'}
         return "\n".join([lines[x] for x in list(lines.keys())])
 class save:
@@ -170,7 +113,7 @@ class save:
             return [f"{badge_to_color[x]}{x}\033[1;m" for x in badgelist]
     def get_trainer_info(self):
         # General
-        trainer_name = lib.hex_to_string(self.smallblock[0x68:0x77])
+        trainer_name = df.char_conversion(self.smallblock[0x68:0x77])
         trainer_gender = "male" if self.smallblock[0x80] == 0 else "female"
         trainer_id = int.from_bytes(self.smallblock[0x78:0x7a], "little")
         secret_id = int.from_bytes(self.smallblock[0x7a:0x7c], "little")
