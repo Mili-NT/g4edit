@@ -14,6 +14,7 @@ class interface:
 class pokemon:
     def __init__(self, data_block):
         self.pokemon = df.decrypt_pokemon(data_block)
+        self.species_id = df.byte_conversion(self.pokemon[0x08:0x09], 'B')
         self.name = df.char_conversion(self.pokemon[0x48:0x5D])
 
 class party:

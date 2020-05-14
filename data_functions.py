@@ -50,6 +50,12 @@ def char_conversion(data, encode=False, pad=None):
             formatted = formatted + pad
         return bytearray(formatted)
 
+def byte_conversion(data, flag, encode=False):
+    if encode is False:
+        return struct.unpack(flag, data)
+    else:
+        return struct.pack(flag, data)
+
 def item_id_conversion(data, decode=True):
     if decode:
         return misc.item_associations[f'{data}']
@@ -57,13 +63,13 @@ def item_id_conversion(data, decode=True):
         return list(misc.item_associations.keys())[list(misc.item_associations.values()).index(data)]
 
 def decrypt_pokemon(encrypted_data):
-    personality_value = struct.unpack("<I", encrypted_data[0x00:0x04])[0]
-    checksum = struct.unpack("<H", encrypted_data[0x06:0x08])[0]
-    # PRNG
+    personality_value = byte_conversion(encrypted_data[0x00:0x04], "<I")[0]
+    checksum = byte_conversion(encrypted_data[0x06:0x08], "<H")[0]
     def rand(data, i, seed):
         seed = ((0xFFFFFFFF & (0x41C64E6D * seed)) + 0x00006073) & 0xFFFFFFFF
-        data[i] ^= struct.pack('<H', seed >> 16)[0]
-        data[i + 1] ^= struct.pack('<H', seed >> 16)[1]
+        bits = byte_conversion(seed >> 16, '<H', True)
+        data[i] ^= bits[0]
+        data[i + 1] ^= bits[1]
         return seed
     def decrypt(data, seed, offset):
         currentseed = seed
