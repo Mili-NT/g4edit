@@ -601,8 +601,9 @@ shifts = {
 # Misc
 def bytearr_to_hexstring(bytearr):
     return ' '.join([f'{i:0>2X}' for i in bytearr])
-def xor_bytes(byte1, byte2):
-    return bytes([_a ^ _b for _a, _b in zip(byte1, byte2)])
+def chunks(l, n):
+    n = max(1, n)
+    return (l[i:i+n] for i in range(0, len(l), n))
 #
 # Color formatting
 #

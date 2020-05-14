@@ -1,5 +1,4 @@
 import misc
-import string
 import itertools
 from platform import system
 import data_functions as df
@@ -11,18 +10,11 @@ class interface:
         self.general_info = self.save.player.display_trainer_info()
         print(self.header)
         print(self.general_info)
-        df.decrypt_pokemon(self.save.smallblock[0xA0:0x628][0:236])
-
+        print(pokemon(self.save.smallblock[0xA0:0x628][0:236]).name)
 class pokemon:
     def __init__(self, data_block):
-        # Chunks
-        self.whole = bytearray(data_block)
-        self.blocks = bytearray(data_block[0x08:0x88])
-        # Header Components
-        self.personality_value = data_block[0x00:0x04]
-        self.unused = data_block[0x04:0x06]
-        self.checksum = int.from_bytes(data_block[0x06:0x08], "little")
-        self.sv = ((int.from_bytes(self.personality_value, "little") & 0x3E000) >> 0xD) % 24
+        self.pokemon = df.decrypt_pokemon(data_block)
+        self.name = df.char_conversion(self.pokemon[0x48:0x5D])
 
 class party:
     def __init__(self, party_block):
