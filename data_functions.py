@@ -1,7 +1,6 @@
-import misc
 import string
 import struct
-import sys
+import indexes
 # Functions
 def char_conversion(data, encode=False, pad=None):
     """
@@ -58,27 +57,38 @@ def byte_conversion(data, flag, encode=False):
 
 def item_id_conversion(data, decode=True):
     if decode:
-        return misc.item_associations[f'{data}']
+        return indexes.item_assoc[data]
     else:
-        return list(misc.item_associations.keys())[list(misc.item_associations.values()).index(data)]
+        return list(indexes.item_assoc.keys())[list(indexes.item_assoc.values()).index(data)]
 
-def decrypt_pokemon(encrypted_data):
+def pokemon_conversion(encrypted_data, encrypt=False):
     personality_value = byte_conversion(encrypted_data[0x00:0x04], "<I")[0]
     checksum = byte_conversion(encrypted_data[0x06:0x08], "<H")[0]
+    shift_value = ((personality_value & 0x3E000) >> 0xD) % 24
+    order = indexes.shifts[shift_value]
     def rand(data, i, seed):
         seed = ((0xFFFFFFFF & (0x41C64E6D * seed)) + 0x00006073) & 0xFFFFFFFF
         bits = byte_conversion(seed >> 16, '<H', True)
         data[i] ^= bits[0]
         data[i + 1] ^= bits[1]
         return seed
-    def decrypt(data, seed, offset):
+    def crypt(data, seed, offset):
         currentseed = seed
         for i in range(offset[0], offset[1], 2):
             rand(data, i, currentseed)
             rand(data, i, currentseed)
             currentseed = rand(data, i, currentseed)
-    decrypt(encrypted_data, checksum, (8, 136))
+
+    crypt(encrypted_data, checksum, (8, 136))
     if len(encrypted_data) > (4 * 32)+8:
-        decrypt(encrypted_data, personality_value, (136, len(encrypted_data)))
-    return encrypted_data
+        crypt(encrypted_data, personality_value, (136, len(encrypted_data)))
+    blocks = [encrypted_data[8:40], encrypted_data[40:72], encrypted_data[72:104], encrypted_data[104:136]]
+    positions = {y:blocks[x] for x,y in enumerate(order[0])}
+    if encrypt:
+        return encrypted_data
+    else:
+        ordered = bytearray()
+        for x in "ABCD":
+            ordered.extend(positions[x])
+        return bytearray([x for x in encrypted_data][0:8] + [x for x in ordered] + [x for x in encrypted_data][136:236])
 

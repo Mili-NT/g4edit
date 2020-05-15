@@ -1,4 +1,5 @@
 import misc
+import indexes
 import itertools
 from platform import system
 import data_functions as df
@@ -10,22 +11,34 @@ class interface:
         self.general_info = self.save.player.display_trainer_info()
         print(self.header)
         print(self.general_info)
-        print(pokemon(self.save.smallblock[0xA0:0x628][0:236]).name)
+        pkmn = pokemon(self.save.smallblock[0xA0:0x628][0:236])
+        print(f"""
+----------------------------------------------------------------------------------------
+Pokemon: {pkmn.name}, lvl. {pkmn.level}
+Species: {pkmn.species} [{pkmn.gender}]
+---Info---
+Trainer: {pkmn.ot_info['ot_name']} ({pkmn.ot_info['tid']}, {pkmn.ot_info['sid']})
+Holding Item: {pkmn.held_item}
+Caught in: {pkmn.pokeball}
+
+""")
 class pokemon:
     def __init__(self, data_block):
-        self.pokemon = df.decrypt_pokemon(data_block)
-        self.species_id = df.byte_conversion(self.pokemon[0x08:0x09], 'B')
+        self.pokemon = df.pokemon_conversion(data_block)
+        self.species = indexes.pkmn_indexes[df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]]
         self.name = df.char_conversion(self.pokemon[0x48:0x5D])
+        self.gender = 'Male' if self.pokemon[0x40] == 0 else 'Female'
+        # OT Info
+        self.ot_info = {'tid': df.byte_conversion(self.pokemon[0x0C:0x0E], 'H')[0],
+                        'sid': df.byte_conversion(self.pokemon[0x0E:0x10], 'H')[0],
+                        'ot_name':df.char_conversion(self.pokemon[0x68:0x77])}
+        self.held_item = df.item_id_conversion(df.byte_conversion(self.pokemon[0x0A:0x0B], 'B')[0])
+        self.pokeball = df.item_id_conversion(self.pokemon[0x83])
+        self.level = self.pokemon[0x8C]
+        self.moveset = [indexes.moves_indexes[x] for x in [x for x in self.pokemon[0x28:0x2F]][::2]]
 
-class party:
-    def __init__(self, party_block):
-        self.in_party = party_block[0x9C]
-        self.slot_one = pokemon(party_block[0:236])
-        self.slot_two = pokemon(party_block[236:472])
-        self.slot_three = pokemon(party_block[472:708])
-        self.slot_four = pokemon(party_block[708:944])
-        self.slot_five = pokemon(party_block[944:1180])
-        self.slot_six = pokemon(party_block[1180:1416])
+
+
 class trainer:
     def __init__(self, trainer_info):
         self.name = trainer_info["name"]
@@ -116,7 +129,6 @@ class save:
         bar = '/'.join(["*" for _ in range(len(self.get_badge_info()))] + ["-" for _ in range(8 - len(self.get_badge_info()))])
         gym_progress = (f"[{bar}]", f"{bar.count('*')}/8 Gyms Beaten!")
         # party:
-        trainer_party = party(self.smallblock[0xA0:0x628])
         #
         trainer_data = {
             "name":trainer_name,
@@ -126,6 +138,6 @@ class save:
             "badges":trainer_badges,
             "money":money,
             "gym_progress":gym_progress,
-            'party':trainer_party,
+            'party':'trainer_party',
         }
         return trainer(trainer_data)
