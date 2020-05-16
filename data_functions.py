@@ -55,6 +55,19 @@ def byte_conversion(data, flag, encode=False):
     else:
         return struct.pack(flag, data)
 
+def byte_to_bit(data):
+    if isinstance(data, bytearray):
+        x = [byte for byte in data]
+        if len(x) == 1:
+            return [(x[0] >> i) & 1 for i in range(8)]
+        else:
+            return [[(byte >> i) & 1 for i in range(8)] for byte in [byte for byte in data]]
+    elif isinstance(data, int):
+        return [(data >> i) & 1 for i in range(8)]
+
+def bytearr_to_hexstring(bytearr):
+    return ' '.join([f'{i:0>2X}' for i in bytearr])
+
 def item_id_conversion(data, decode=True):
     if decode:
         return indexes.item_assoc[data]
@@ -85,10 +98,10 @@ def pokemon_conversion(encrypted_data, encrypt=False):
     blocks = [encrypted_data[8:40], encrypted_data[40:72], encrypted_data[72:104], encrypted_data[104:136]]
     positions = {y:blocks[x] for x,y in enumerate(order[0])}
     if encrypt:
-        return encrypted_data
+        return encrypted_data, personality_value, checksum
     else:
         ordered = bytearray()
         for x in "ABCD":
             ordered.extend(positions[x])
-        return bytearray([x for x in encrypted_data][0:8] + [x for x in ordered] + [x for x in encrypted_data][136:236])
+        return bytearray([x for x in encrypted_data][0:8] + [x for x in ordered] + [x for x in encrypted_data][136:236]), personality_value, checksum
 

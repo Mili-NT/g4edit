@@ -1,6 +1,7 @@
 import misc
 import indexes
 import itertools
+import random
 from platform import system
 import data_functions as df
 
@@ -12,32 +13,79 @@ class interface:
         print(self.header)
         print(self.general_info)
         pkmn = pokemon(self.save.smallblock[0xA0:0x628][0:236])
-        print(f"""
-----------------------------------------------------------------------------------------
-Pokemon: {pkmn.name}, lvl. {pkmn.level}
-Species: {pkmn.species} [{pkmn.gender}]
----Info---
-Trainer: {pkmn.ot_info['ot_name']} ({pkmn.ot_info['tid']}, {pkmn.ot_info['sid']})
-Holding Item: {pkmn.held_item}
-Caught in: {pkmn.pokeball}
 
-""")
 class pokemon:
     def __init__(self, data_block):
-        self.pokemon = df.pokemon_conversion(data_block)
-        self.species = indexes.pkmn_indexes[df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]]
-        self.name = df.char_conversion(self.pokemon[0x48:0x5D])
-        self.gender = 'Male' if self.pokemon[0x40] == 0 else 'Female'
-        # OT Info
+        self.decrypted = df.pokemon_conversion(data_block)
+        self.pokemon = self.decrypted[0]
+        self.pid = self.decrypted[1]
+        self.checksum = self.decrypted[2]
+        # General
+        self.general_info = {
+            'species_id': df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0],
+            'species': indexes.pkmn_indexes[df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]],
+            'name': df.char_conversion(self.pokemon[0x48:0x5D]),
+            'gender':'Male' if self.pokemon[0x40] == 0 else 'Female',
+            'nature': indexes.nature_indexes[self.pid % 25],
+            'item': df.item_id_conversion(df.byte_conversion(self.pokemon[0x0A:0x0C], 'H')[0]),
+            'pokeball': df.item_id_conversion(self.pokemon[0x83]),
+            'pokerus': False if self.pokemon[0x82] == 0 else True,
+            'plat_met_at': indexes.location_indexes[df.byte_conversion(self.pokemon[0x46:0x48], 'H')[0]],
+        }
+        # Trainer info
         self.ot_info = {'tid': df.byte_conversion(self.pokemon[0x0C:0x0E], 'H')[0],
                         'sid': df.byte_conversion(self.pokemon[0x0E:0x10], 'H')[0],
                         'ot_name':df.char_conversion(self.pokemon[0x68:0x77])}
-        self.held_item = df.item_id_conversion(df.byte_conversion(self.pokemon[0x0A:0x0B], 'B')[0])
-        self.pokeball = df.item_id_conversion(self.pokemon[0x83])
-        self.level = self.pokemon[0x8C]
-        self.moveset = [indexes.moves_indexes[x] for x in [x for x in self.pokemon[0x28:0x2F]][::2]]
-
-
+        # Battle related stats
+        self.battle = {
+            'level':self.pokemon[0x8C],
+            'xp': df.byte_conversion(bytearray(self.pokemon[0x10:0x13] + b'\x00'), 'I')[0],
+            'ability':indexes.ability_indexes[self.pokemon[0x15]],
+            'moveset': self.format_moves(),
+            'current_hp':df.byte_conversion(self.pokemon[0x8E:0x8F], 'B')[0],
+            'max_hp':df.byte_conversion(self.pokemon[0x90:0x91], 'B')[0],
+            'attack': df.byte_conversion(self.pokemon[0x92:0x94], 'H')[0],
+            'defense': df.byte_conversion(self.pokemon[0x94:0x95], 'B')[0],
+            'speed': df.byte_conversion(self.pokemon[0x96:0x97], 'B')[0],
+            'spec_attack': df.byte_conversion(self.pokemon[0x98:0x99], 'B')[0],
+            'spec_defense': df.byte_conversion(self.pokemon[0x9A:0x9B], 'B')[0]
+        }
+    def format_moves(self):
+        moves = [indexes.moves_indexes[x] for x in [x for x in self.pokemon[0x28:0x2F]][::2]]
+        pp = [x for x in self.pokemon[0x30:0x34]]
+        for x in range(len(pp)):
+            moves[x]['pp'] = (moves[x]['pp'], pp[x])
+            if moves[x]['pp'][1] > moves[x]['pp'][0]:
+                tup = moves[x]['pp']
+                moves[x]['pp'] = (tup[0], tup[0])
+        return moves
+    def set_new_pv(self, specid, gender=None, nature=None, shiny=False):
+        gender_ratio = indexes.gender_ratios[specid]
+        if nature:
+            nature = list(indexes.nature_indexes.keys())[list(indexes.nature_indexes.values()).index(nature)]
+        else:
+            nature = self.pid % 25
+        while True:
+            new_pv = random.getrandbits(32) & 0xffffffff
+            while len(f'{new_pv}') != 10:
+                new_pv = int(f'{new_pv}{random.randint(0, 9)}')
+            if gender_ratio in [0, 254, 255] and new_pv % 256 != gender_ratio:
+                continue
+            elif (gender == 1 and new_pv % 256 >= gender_ratio) or (gender == 0 and new_pv % 256 < gender_ratio):
+                continue
+            if new_pv % 25 != nature:
+                continue
+            if shiny and self.check_shiny(new_pv) is False:
+                continue
+            self.pid = new_pv
+            break
+    def check_shiny(self, pv):
+        tid = self.ot_info['tid']
+        sid = self.ot_info['sid']
+        p1 = int(pv / 65536)
+        p2 = pv % 65536
+        isShiny = tid ^ sid ^ p1 ^ p2
+        return True if isShiny < 8 else False
 
 class trainer:
     def __init__(self, trainer_info):
@@ -71,6 +119,7 @@ class trainer:
             "prog_bar": f"{misc.cstring(self.gym_progress[0], color='blu')} => {misc.cstring(self.gym_progress[1], color='blu')}",
             'border': (''.join(['-' for _ in range(56)])) + '\n'}
         return "\n".join([lines[x] for x in list(lines.keys())])
+
 class save:
     def __init__(self, savedata):
         self.allblocks = bytearray(savedata)

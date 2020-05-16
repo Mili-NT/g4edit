@@ -1,8 +1,5 @@
 #!/usr/bin/python3
 import os
-# Misc
-def bytearr_to_hexstring(bytearr):
-    return ' '.join([f'{i:0>2X}' for i in bytearr])
 #
 # Color formatting
 #
