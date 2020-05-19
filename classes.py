@@ -13,6 +13,8 @@ class interface:
         print(self.header)
         print(self.general_info)
         pkmn = pokemon(self.save.smallblock[0xA0:0x628][0:236])
+        print(pkmn.pokemon[0x48:0x5D])
+        print(df.bytearr_to_hexstring(pkmn.pokemon[0x48:0x5D]))
 
 class pokemon:
     def __init__(self, data_block):

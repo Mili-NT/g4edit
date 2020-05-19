@@ -1,8 +1,61 @@
 #!/usr/bin/python3
+import logging
 import os
-#
-# Color formatting
-#
+"""
+Logging functions
+"""
+# Opens g4edit.log with w, so it clears previous logs. The Format is datetime - level => message
+logging.basicConfig(filename='g4edit.log',
+                    filemode='w',
+                    format='%(asctime)s - (%(levelname)s) => %(message)s\n',
+                    datefmt='%d-%b-%y %H:%M:%S',
+                    level=logging.NOTSET)
+def log(message, level='error', crashmsg='G4Edit encountered a fatal error.'):
+    """
+    :param message: The message to log
+    :param level: the level to log as. This can be a string ('error', 'debug'), a char ('e', 'd'), or an int (40, 10).
+    Defaults to error
+    :param crashmsg: If the error is critical, include a message to print
+    :return: Nothing, write to log file
+    """
+    # Maps the first char to the integer ID of the corresponding level
+    levels = {'c':50,
+              'e':40,
+              'w':30,
+              'i':20,
+              'd':10,
+              'n':0}
+    try:
+        # If a string level is passed, it takes the first char and gets corresponding ID
+        if isinstance(level, str):
+            setlevel = levels[level.lower()[0]]
+        # If an int is passed, it checks if the int is a valid id by checking for presence in levels.values()
+        elif isinstance(level, int) and level in list(levels.values()):
+            # If valid, simply use the int
+            setlevel = level
+        # If neither are true, likely because the int isnt a valid ID, raises an exception
+        else:
+            raise Exception
+    except Exception:
+        # Logs that an invalid level argument was passed
+        logging.warning('Passed level argument is not valid, defaulting to error (40)\n')
+        # Defaults to 40, aka the Error level
+        setlevel = 40
+    # If the level is error, it includes the traceback
+    print(f"level {level} == {setlevel}")
+    if setlevel == 40:
+        logging.error(message, exc_info=True)
+    # If critical, includes traceback, prints a crash message, and exits
+    elif setlevel == 50:
+        logging.critical(message, exc_info=True)
+        print(f'{crashmsg} Check g4edit.log for traceback info.')
+        exit()
+    # If not, simply log and append a newline
+    else:
+        logging.log(setlevel, message)
+"""
+Misc functions for colors and formatting
+"""
 colors = {"grn": "\033[1;32m",
           "blu": "\033[7;34;47m",
           "prp": "\033[1;35m",
@@ -15,7 +68,6 @@ def cstring(msg, color=None):
     else:
         formatted = f"{colors[color]}{msg}{colors['end']}" if color else f"{colors['whi']}{msg}{colors['end']}"
         return formatted
-# Other
 def get_title():
     title = """
 --------------------------------------------------------
