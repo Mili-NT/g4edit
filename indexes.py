@@ -590,7 +590,7 @@ shifts = {
                 23:('DCBA','DCBA'),
                 }
 pkmn_indexes = {
-    0:'-----',
+    0:'None',
     1:'Bulbasaur',
     2:'Ivysaur',
     3:'Venusaur',
@@ -1598,6 +1598,7 @@ pkmn_types = {
     'Manaphy Egg':'???',
 }
 moves_indexes = {
+    0:{'name': 'None', 'type': 'None', 'category': 'None', 'pp': 0, 'power': '0', 'accuracy': '0'},
     1:{'name': 'Pound', 'type': 'Normal', 'category': 'Physical', 'pp': 35, 'power': '40', 'accuracy': '100%'},
     2:{'name': 'Karate Chop', 'type': 'Fighting', 'category': 'Physical', 'pp': 25, 'power': '50', 'accuracy': '100%'},
     3:{'name': 'Double Slap', 'type': 'Normal', 'category': 'Physical', 'pp': 10, 'power': '15', 'accuracy': '85%'},
@@ -2067,6 +2068,7 @@ moves_indexes = {
     467:{'name': 'Shadow Force', 'type': 'Ghost', 'category': 'Physical', 'pp': 5, 'power': '120', 'accuracy': '100%'},
 }
 ability_indexes = {
+0: ('None', 'None'),
 91: ('Adaptability', 'Powers up moves of the same type as the Pokémon.'),
 106: ('Aftermath', 'Damages the attacker if it contacts the Pokémon with a finishing hit.'),
 76: ('Air Lock', 'Eliminates the effects of weather.'),

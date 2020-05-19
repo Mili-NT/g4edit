@@ -42,7 +42,6 @@ def log(message, level='error', crashmsg='G4Edit encountered a fatal error.'):
         # Defaults to 40, aka the Error level
         setlevel = 40
     # If the level is error, it includes the traceback
-    print(f"level {level} == {setlevel}")
     if setlevel == 40:
         logging.error(message, exc_info=True)
     # If critical, includes traceback, prints a crash message, and exits
@@ -79,3 +78,13 @@ def get_title():
 --------------------------------------------------------
 """.lstrip()
     return f"{cstring(title.rstrip(), 'prp')}\n{cstring('-----------A CLI Save Editor for Generation 4-----------', 'prp')}"
+def get_padded(string):
+    uncolored = string
+    for c in colors.values():
+        uncolored = uncolored.replace(c, "")
+    diff = 56 - len(uncolored)
+    perside = ''.join(['-' for _ in range(diff // 2)])
+    pad = f"{perside}{uncolored}{perside}"
+    while len(pad) < 56:
+        pad = f"{pad}-"
+    return pad.replace(uncolored, string)

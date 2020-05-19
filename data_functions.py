@@ -64,41 +64,6 @@ def byte_conversion(data, flag, encode=False):
     else:
         return struct.pack(flag, data)
 
-def byte_to_bit(data):
-    """
-    This function splits bytes into an array of 8 bits.
-    If a bytearray is passed, it splits it into a linked list of bits.
-
-    :param data: The byte or bytearray to decode to bits
-    :return: A list or linked list of bits
-    """
-    # If the data is a bytearray:
-    if isinstance(data, bytearray):
-        # Split into a flat list of ints for each byte
-        x = [byte for byte in data]
-        # If the data is a single byte, return a singleton list.
-        # This is added to prevent a singleton linked list with a singleton list as an element
-        if len(x) == 1:
-            return [(x[0] >> i) & 1 for i in range(8)]
-        else:
-            # Return a linked list, with elements of length 8, for each byte in the array
-            return [[(byte >> i) & 1 for i in range(8)] for byte in [byte for byte in data]]
-    # If the data is a single int, aka a single byte that has been passed and automatically converted to an int:
-    elif isinstance(data, int):
-        return [(data >> i) & 1 for i in range(8)]
-
-def bytearr_to_hexstring(bytearr):
-    """
-    This function converts a bytearray to a string of hex encoded data in the format you'd see in a hex editor.
-    For example:
-    bytearr => bytearray(b'>\x01I\x01W\x01X\x01\xff\xff\xff\xff\xff\xffR\x01\xff\xff\xb1\x01\xff')
-    Decoded data: 3E 01 49 01 57 01 58 01 FF FF FF FF FF FF 52 01 FF FF B1 01 FF
-
-    :param bytearr: An array of bytes
-    :return: Hex encoded data
-    """
-    return ' '.join([f'{i:0>2X}' for i in bytearr])
-
 def item_id_conversion(data, decode=True):
     """
 
@@ -210,3 +175,41 @@ def pokemon_conversion(pkmn_data, encrypt=False):
         # decrypted, unshuffled bytes. We also return the PV and checksum.
         return bytearray([x for x in pkmn_data][0:8] + [x for x in ordered] + [x for x in pkmn_data][136:236]), personality_value, checksum
 
+def byte_to_bit(data):
+    """
+    This function splits bytes into an array of 8 bits.
+    If a bytearray is passed, it splits it into a linked list of bits.
+
+    :param data: The byte or bytearray to decode to bits
+    :return: A list or linked list of bits
+    """
+    # If the data is a bytearray:
+    if isinstance(data, bytearray):
+        # Split into a flat list of ints for each byte
+        x = [byte for byte in data]
+        # If the data is a single byte, return a singleton list.
+        # This is added to prevent a singleton linked list with a singleton list as an element
+        if len(x) == 1:
+            return [(x[0] >> i) & 1 for i in range(8)]
+        else:
+            # Return a linked list, with elements of length 8, for each byte in the array
+            return [[(byte >> i) & 1 for i in range(8)] for byte in [byte for byte in data]]
+    # If the data is a single int, aka a single byte that has been passed and automatically converted to an int:
+    elif isinstance(data, int):
+        return [(data >> i) & 1 for i in range(8)]
+
+def bytearr_to_hexstring(bytearr):
+    """
+    This function converts a bytearray to a string of hex encoded data in the format you'd see in a hex editor.
+    For example:
+    bytearr => bytearray(b'>\x01I\x01W\x01X\x01\xff\xff\xff\xff\xff\xffR\x01\xff\xff\xb1\x01\xff')
+    Decoded data: 3E 01 49 01 57 01 58 01 FF FF FF FF FF FF 52 01 FF FF B1 01 FF
+
+    :param bytearr: An array of bytes
+    :return: Hex encoded data
+    """
+    return ' '.join([f'{i:0>2X}' for i in bytearr])
+
+def list_to_chunks(array, num_of_chunks):
+    num_of_chunks = max(1, num_of_chunks)
+    return (array[i:i + num_of_chunks] for i in range(0, len(array), num_of_chunks))

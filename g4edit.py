@@ -3,9 +3,7 @@ import os
 import sys
 import misc
 import classes
-# TODO: Interface and Text Wrapping
-# TODO: Items and Inventory
-# TODO: Party
+
 # IMPORTANT FUNCTIONS
 def load_file(fp):
     """
@@ -17,9 +15,10 @@ def load_file(fp):
     try:
         with open(fp, "rb+") as f:
             misc.log(f"File loaded from: {fp}", 'debug')
-            return classes.save(f.read())
+            contents = f.read()
     except Exception as e:
         misc.log(e, 'critical', crashmsg="Fatal error encountered loading file with load_file().")
+    return classes.save(contents)
 def main(filepath=None):
     """
     The main function for the program. Takes an optional parameter `filepath`, so the user can specify what file to load
@@ -35,11 +34,14 @@ def main(filepath=None):
                 if os.path.isfile(filepath):
                     break
                 else:
-                    misc.log("Invalid filepath entered.", "info")
+                    misc.log(f"Invalid filepath ({filepath}) entered.", "info")
                     print("No file found at specified path.")
                     continue
         playersav = load_file(filepath)
-        interface = classes.interface(playersav)
+        try:
+            interface = classes.interface(playersav)
+        except Exception as e:
+            misc.log(e, 'c', "Critical Error loading interface object.")
     except KeyboardInterrupt:
         misc.log("User closed program via keyboard interrupt", 'info')
         exit()

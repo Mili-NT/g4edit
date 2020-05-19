@@ -10,11 +10,11 @@ class interface:
         self.save = saveobj
         self.header = misc.get_title()
         self.general_info = self.save.player.display_trainer_info()
+        self.party_info = self.save.player.display_party_info()
         print(self.header)
         print(self.general_info)
-        pkmn = pokemon(self.save.smallblock[0xA0:0x628][0:236])
-        print(pkmn.pokemon[0x48:0x5D])
-        print(df.bytearr_to_hexstring(pkmn.pokemon[0x48:0x5D]))
+        print(self.party_info)
+
 
 class pokemon:
     def __init__(self, data_block):
@@ -52,14 +52,18 @@ class pokemon:
             'spec_attack': df.byte_conversion(self.pokemon[0x98:0x99], 'B')[0],
             'spec_defense': df.byte_conversion(self.pokemon[0x9A:0x9B], 'B')[0]
         }
+        # If the slot is empty, set pokemon name to empty to prevent it returning ???????
+        if df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0] == 0:
+            self.general_info['name'] = 'Empty'
     def format_moves(self):
         moves = [indexes.moves_indexes[x] for x in [x for x in self.pokemon[0x28:0x2F]][::2]]
         pp = [x for x in self.pokemon[0x30:0x34]]
-        for x in range(len(pp)):
-            moves[x]['pp'] = (moves[x]['pp'], pp[x])
-            if moves[x]['pp'][1] > moves[x]['pp'][0]:
-                tup = moves[x]['pp']
-                moves[x]['pp'] = (tup[0], tup[0])
+        if pp != [0, 0, 0, 0]:
+            for x in range(len(pp)):
+                moves[x]['pp'] = (moves[x]['pp'], pp[x])
+                if moves[x]['pp'][1] > moves[x]['pp'][0]:
+                    tup = moves[x]['pp']
+                    moves[x]['pp'] = (tup[0], tup[0])
         return moves
     def set_new_pv(self, specid, gender=None, nature=None, shiny=False):
         gender_ratio = indexes.gender_ratios[specid]
@@ -88,53 +92,22 @@ class pokemon:
         p2 = pv % 65536
         isShiny = tid ^ sid ^ p1 ^ p2
         return True if isShiny < 8 else False
-
+class party:
+    def __init__(self, party_block):
+        self.whole = party_block
+        self.in_party = self.whole[0x9C]
+        self.contents = self.load_party()
+    def load_party(self):
+        blocks = [self.whole[0:236], self.whole[236:472], self.whole[472:708],
+                  self.whole[708:944], self.whole[944:1180], self.whole[1180:1416]]
+        return {index+1:pokemon(data) for index,data in enumerate(blocks)}
 class trainer:
-    def __init__(self, trainer_info):
-        self.name = trainer_info["name"]
-        self.gender = trainer_info["gender"]
-        self.trainer_id = trainer_info["tid"]
-        self.secret_id = trainer_info["sid"]
-        self.badges = trainer_info["badges"]
-        self.money = trainer_info["money"]
-        self.gym_progress = trainer_info["gym_progress"]
-        self.party = trainer_info['party']
-
-    def display_trainer_info(self):
-        def get_padded(string):
-            uncolored = string
-            for c in misc.colors.values():
-                uncolored = uncolored.replace(c, "")
-            diff = 56 - len(uncolored)
-            perside = ''.join(['-' for _ in range(diff // 2)])
-            pad = f"{perside}{uncolored}{perside}"
-            while len(pad) < 56:
-                pad = f"{pad}-"
-            return pad.replace(uncolored, string)
-        lines = {
-            "first_header": get_padded(f"Trainer: {misc.cstring(self.name, color='blu')}/{misc.cstring(self.gender, color='blu')}"),
-            "first_id": f"Trainer ID:{''.join([' ' for _ in range(14 - len('Trainer ID:'))])}{misc.cstring(self.trainer_id, color='blu')}",
-            "second_id": f"Secret ID:{''.join([' ' for _ in range(14 - len('Secret ID:'))])}{misc.cstring(self.secret_id, color='blu')}",
-            "money": f"Money:{''.join([' ' for _ in range(14 - len('Money:'))])}{misc.cstring('$' + str(self.money), color='blu')}",
-            "second_header": f"{get_padded('Game Progress')}",
-            "badge_lines": f"{misc.cstring(self.name, color='blu')} has {', '.join(self.badges)}\n",
-            "prog_bar": f"{misc.cstring(self.gym_progress[0], color='blu')} => {misc.cstring(self.gym_progress[1], color='blu')}",
-            'border': (''.join(['-' for _ in range(56)])) + '\n'}
-        return "\n".join([lines[x] for x in list(lines.keys())])
-
-class save:
-    def __init__(self, savedata):
-        self.allblocks = bytearray(savedata)
-        self.smallblock = self.allblocks[0x00000:0x0CF2B]
-        self.bigblock = self.allblocks[0x0CF2C:0x1F10F]
-        self.smallblock_backup = self.allblocks[(0x00000 + 0x40000):(0x0CF2B + 0x40000)]
-        self.bigblock_backup = self.allblocks[(0x0CF2C + 0x40000):(0x1F10F + 0x40000)]
-        self.player = self.get_trainer_info()
-    def update_value(self, offset, bytestr):
-        self.allblocks[(offset[0]):(offset[1])] = bytestr
-        self.player = self.get_trainer_info()
+    def __init__(self, datablock):
+        self.whole = datablock
+        self.trainer_info = self.get_trainer_info()
+        self.trainer_party = party(self.whole[0xA0:0x628])
     def get_badge_info(self):
-        value = self.smallblock[0x82]
+        value = self.whole[0x82]
         badge_dict = {
             1: "Coal",
             2: "Forest",
@@ -170,15 +143,16 @@ class save:
             return [f"{badge_to_color[x]}{x}\033[1;m" for x in badgelist]
     def get_trainer_info(self):
         # General
-        trainer_name = df.char_conversion(self.smallblock[0x68:0x77])
-        trainer_gender = "male" if self.smallblock[0x80] == 0 else "female"
-        trainer_id = int.from_bytes(self.smallblock[0x78:0x7a], "little")
-        secret_id = int.from_bytes(self.smallblock[0x7a:0x7c], "little")
+        trainer_name = df.char_conversion(self.whole[0x68:0x77])
+        trainer_gender = "male" if self.whole[0x80] == 0 else "female"
+        trainer_id = int.from_bytes(self.whole[0x78:0x7a], "little")
+        secret_id = int.from_bytes(self.whole[0x7a:0x7c], "little")
         trainer_badges = self.get_badge_info()
-        money = int.from_bytes(self.smallblock[0x7C:0x7F], "little")
+        money = int.from_bytes(self.whole[0x7C:0x7F], "little")
         # Progress
         bar = '/'.join(["*" for _ in range(len(self.get_badge_info()))] + ["-" for _ in range(8 - len(self.get_badge_info()))])
         gym_progress = (f"[{bar}]", f"{bar.count('*')}/8 Gyms Beaten!")
+        #
         # party:
         #
         trainer_data = {
@@ -189,6 +163,54 @@ class save:
             "badges":trainer_badges,
             "money":money,
             "gym_progress":gym_progress,
-            'party':'trainer_party',
         }
-        return trainer(trainer_data)
+        return trainer_data
+    def display_trainer_info(self):
+        info_lines = [
+            misc.get_padded(f"Trainer: {misc.cstring(self.trainer_info['name'], color='blu')}/{misc.cstring(self.trainer_info['gender'], color='blu')}"),
+            f"Trainer ID:{''.join([' ' for _ in range(14 - len('Trainer ID:'))])}{misc.cstring(self.trainer_info['tid'], color='blu')}",
+            f"Secret ID:{''.join([' ' for _ in range(14 - len('Secret ID:'))])}{misc.cstring(self.trainer_info['sid'], color='blu')}",
+            f"Money:{''.join([' ' for _ in range(14 - len('Money:'))])}{misc.cstring('$' + str(self.trainer_info['money']), color='blu')}",
+            ]
+        badges = []
+        for index,chunk in enumerate(df.list_to_chunks(self.trainer_info['badges'], 2)):
+            if index == 0:
+                badges.append(f"{misc.cstring(self.trainer_info['name'], color='blu')} has: {chunk[0]}        {chunk[1]}")
+            else:
+                row = f"{chunk[0]}{''.join([' ' for x in range(8-(len(f'{chunk[0]}')-10))])}{chunk[1]}"
+                offset = len(f"{self.trainer_info['name']} has:")
+                badges.append(f"{''.join([' ' for _ in range(offset)])} {row}")
+
+        game_progress = [
+            f"{misc.get_padded('Game Progress')}",
+            '\n'.join(badges).rstrip(),
+            f"{misc.cstring(self.trainer_info['gym_progress'][0], color='blu')} => {misc.cstring(self.trainer_info['gym_progress'][1], color='blu')}",
+            ]
+        display = "\n".join(info_lines + game_progress)
+        return display
+    def display_party_info(self):
+        party_lines = [
+            misc.get_padded('Party')
+        ]
+        for slot in self.trainer_party.contents.keys():
+            if self.trainer_party.contents[slot].general_info['name'] == 'Empty':
+                info = ''
+            else:
+                info = f"({self.trainer_party.contents[slot].general_info['gender']} {self.trainer_party.contents[slot].general_info['species']})"
+            party_lines.append(f"[{slot}]: {self.trainer_party.contents[slot].general_info['name']} {info}")
+        party_lines.append(''.join(['-' for _ in range(56)]))
+        return "\n".join(party_lines)
+
+class save:
+    def __init__(self, savedata):
+        self.allblocks = bytearray(savedata)
+        self.smallblock = self.allblocks[0x00000:0x0CF2B]
+        self.bigblock = self.allblocks[0x0CF2C:0x1F10F]
+        self.smallblock_backup = self.allblocks[(0x00000 + 0x40000):(0x0CF2B + 0x40000)]
+        self.bigblock_backup = self.allblocks[(0x0CF2C + 0x40000):(0x1F10F + 0x40000)]
+        try:
+            self.player = trainer(self.allblocks)
+        except Exception as e:
+            misc.log(e, 'c', "Error creating trainer object!")
+    def update_value(self, offset, bytestr):
+        self.allblocks[(offset[0]):(offset[1])] = bytestr
