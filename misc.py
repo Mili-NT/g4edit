@@ -1,6 +1,7 @@
 #!/usr/bin/python3
-import logging
 import os
+import logging
+from platform import system
 """
 Logging functions
 """
@@ -61,12 +62,20 @@ colors = {"grn": "\033[1;32m",
           "whi": "\033[1;37m",
           "end":"\033[1;m",
           }
+badge_color = ["\033[1;30;40m", "\033[1;37;42m", "\033[1;37;41m", "\033[1;37;44m", "\033[1;37;45m",
+               "\033[2;33;40m", "\033[1;37;46m", "\033[1;37;43m", "\033[1;m"]
 def cstring(msg, color=None):
     if os.name == "nt":
         return msg
     else:
         formatted = f"{colors[color]}{msg}{colors['end']}" if color else f"{colors['whi']}{msg}{colors['end']}"
         return formatted
+def stripcolor(msg):
+    for c in colors:
+        msg = msg.replace(c, '')
+    for c in badge_color:
+        msg = msg.replace(c, ' ')
+    return msg
 def get_title():
     title = """
 --------------------------------------------------------
@@ -88,3 +97,8 @@ def get_padded(string):
     while len(pad) < 56:
         pad = f"{pad}-"
     return pad.replace(uncolored, string)
+def clear():
+    if system().lower() == 'windows':
+        os.system('cls')
+    else:
+        os.system('clear')

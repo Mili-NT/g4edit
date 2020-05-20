@@ -3043,3 +3043,23 @@ gender_ratios = {
     492:255,
     493:255,
 }
+badge_dict = {
+    1: "Coal",
+    2: "Forest",
+    4: "Cobble",
+    8: "Fen",
+    16: "Relic",
+    32: "Mine",
+    64: "Icicle",
+    128: "Beacon",
+}
+badge_to_color = {
+    "Coal Badge": "\033[1;40;100m",
+    "Forest Badge": "\033[1;37;42m",
+    "Cobble Badge": "\033[1;37;41m",
+    "Fen Badge": "\033[1;37;44m",
+    "Relic Badge": "\033[1;37;45m",
+    "Mine Badge": "\033[1;40;100m",
+    "Icicle Badge": "\033[1;37;46m",
+    "Beacon Badge": "\033[1;37;43m",
+}

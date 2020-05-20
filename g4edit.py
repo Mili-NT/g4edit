@@ -18,7 +18,7 @@ def load_file(fp):
             contents = f.read()
     except Exception as e:
         misc.log(e, 'critical', crashmsg="Fatal error encountered loading file with load_file().")
-    return classes.save(contents)
+    return classes.save(contents, fp)
 def main(filepath=None):
     """
     The main function for the program. Takes an optional parameter `filepath`, so the user can specify what file to load

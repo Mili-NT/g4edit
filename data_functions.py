@@ -6,8 +6,7 @@ def char_conversion(data, encode=False, pad=None):
     """
     :param data: The data to be operated on. This is either bytes to decode or a string to encode
     :param encode: True to decode, False to decode
-    :param pad: Values to append to the encoded string to fill an offset. For example, the trainer name is
-    0x68 -> 0x77. If we encode "AAAA", we would pass [0, 0, 0, 0] as the pad to fill the remaining bytes
+    :param pad: Values to append to the encoded string to fill an offset.
     :return: decoded string or encoded bytes
     """
     symbols = {
@@ -44,7 +43,7 @@ def char_conversion(data, encode=False, pad=None):
         converted = [dec[x] if x in dec.keys() else dec['?'] for x in data]
         formatted = [1] * (len(converted) * 2 - 1)
         formatted[0::2] = converted
-        formatted = formatted + [1, 255, 255]
+        formatted = formatted + [1]
         if pad:
             formatted = formatted + pad
         return bytearray(formatted)
@@ -209,6 +208,12 @@ def bytearr_to_hexstring(bytearr):
     :return: Hex encoded data
     """
     return ' '.join([f'{i:0>2X}' for i in bytearr])
+
+def read_from_offset(whole, offset):
+    if isinstance(offset, int):
+        return whole[offset]
+    else:
+        return whole[offset[0]:offset[1]]
 
 def list_to_chunks(array, num_of_chunks):
     num_of_chunks = max(1, num_of_chunks)
