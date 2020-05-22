@@ -63,17 +63,17 @@ def byte_conversion(data, flag, encode=False):
     else:
         return struct.pack(flag, data)
 
-def item_id_conversion(data, decode=True):
-    """
+def get_index(index, element, from_val=False):
+    try:
+        if from_val:
+            return list(index.keys())[list(index.values()).index(element)]
+        else:
+            return index[element]
+    except Exception:
+        return None
 
-    :param data: item ID or name
-    :param decode: flag to indicate to do ID->name or name->ID
-    :return: the name (str) associated with the passed ID, or the ID (int) associated with passed name
-    """
-    if decode:
-        return indexes.item_assoc[data]
-    else:
-        return list(indexes.item_assoc.keys())[list(indexes.item_assoc.values()).index(data)]
+def is_valid(index, element, pos):
+    return element in list(index.keys()) if pos == 'key' else element in list(index.values())
 
 def pokemon_conversion(pkmn_data, encrypt=False):
     """
@@ -217,4 +217,4 @@ def read_from_offset(whole, offset):
 
 def list_to_chunks(array, num_of_chunks):
     num_of_chunks = max(1, num_of_chunks)
-    return (array[i:i + num_of_chunks] for i in range(0, len(array), num_of_chunks))
+    return list((array[i:i + num_of_chunks] for i in range(0, len(array), num_of_chunks)))

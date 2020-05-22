@@ -4,6 +4,9 @@ import sys
 import misc
 import classes
 
+# TODO: Create new pokemon from empty
+# TODO: Inventory
+
 # IMPORTANT FUNCTIONS
 def load_file(fp):
     """
@@ -39,6 +42,7 @@ def main(filepath=None):
                     continue
         playersav = load_file(filepath)
         try:
+            misc.clear()
             interface = classes.interface(playersav)
         except Exception as e:
             misc.log(e, 'c', "Critical Error loading interface object.")

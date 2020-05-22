@@ -24,7 +24,7 @@ offsets = {
             'item': (0x02,0x03),
             'item_amount':(0x02,0x03),
         }
-item_assoc = {
+items = {
     0:'None',
     1:'Master Ball',
     2:'Ultra Ball',
@@ -589,7 +589,7 @@ shifts = {
                 22:('DCAB','CDBA'),
                 23:('DCBA','DCBA'),
                 }
-pkmn_indexes = {
+pkmn = {
     0:'None',
     1:'Bulbasaur',
     2:'Ivysaur',
@@ -1099,7 +1099,7 @@ pkmn_indexes = {
     506:'Rotom',
     507:'Rotom',
 }
-pkmn_types = {
+types = {
     '-----':'Normal',
     'Bulbasaur':('Grass', 'Poison'),
     'Ivysaur':('Grass', 'Poison'),
@@ -1597,7 +1597,7 @@ pkmn_types = {
     'Pokémon Egg':'???',
     'Manaphy Egg':'???',
 }
-moves_indexes = {
+moves = {
     0:{'name': 'None', 'type': 'None', 'category': 'None', 'pp': 0, 'power': '0', 'accuracy': '0'},
     1:{'name': 'Pound', 'type': 'Normal', 'category': 'Physical', 'pp': 35, 'power': '40', 'accuracy': '100%'},
     2:{'name': 'Karate Chop', 'type': 'Fighting', 'category': 'Physical', 'pp': 25, 'power': '50', 'accuracy': '100%'},
@@ -2067,7 +2067,7 @@ moves_indexes = {
     466:{'name': 'Ominous Wind', 'type': 'Ghost', 'category': 'Special', 'pp': 5, 'power': '60', 'accuracy': '100%'},
     467:{'name': 'Shadow Force', 'type': 'Ghost', 'category': 'Physical', 'pp': 5, 'power': '120', 'accuracy': '100%'},
 }
-ability_indexes = {
+abilities = {
 0: ('None', 'None'),
 91: ('Adaptability', 'Powers up moves of the same type as the Pokémon.'),
 106: ('Aftermath', 'Damages the attacker if it contacts the Pokémon with a finishing hit.'),
@@ -2193,7 +2193,7 @@ ability_indexes = {
 73: ('White Smoke', 'The Pokémon is protected by its white smoke, which prevents other Pokémon from lowering its stats.'),
 25: ('Wonder Guard', 'Its mysterious power only lets supereffective moves hit the Pokémon.'),
 }
-location_indexes = {
+locations = {
     0:'Mystery Zone',
     1:'Twinleaf Town',
     2:'Sandgem Town',
@@ -2521,7 +2521,7 @@ location_indexes = {
     3075:'Event Pokémon',
     3076:'Concert Event',
 }
-nature_indexes = {
+natures = {
     0:'Hardy',
     1:'Lonely',
     2:'Brave',
@@ -2549,6 +2549,7 @@ nature_indexes = {
     24:'Quirky',
 }
 gender_ratios = {
+    0:255,
     1:31,
     2:31,
     3:31,
