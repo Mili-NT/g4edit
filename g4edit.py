@@ -7,17 +7,19 @@ import classes
 """
 Bugs
 """
-# TODO: Subscription error when calling update() on species change
 # TODO: Changing gender doesn't retain shinyness
 """
 TODO list
 """
+# High Priority:
 # TODO: FINISH STATS SUBEDITOR
-# TODO: Quickbinds editor: max health, max level, PP restore, etc.
 # TODO: PP Up implementation
 # TODO: Create new pokemon from empty
-# TODO: Inventory
 # TODO: IV/EV implementation
+# TODO: Inventory
+# Not as High Priority:
+# TODO: Find a way to shrink blockspace on PV generation (and update docstring for gender)
+# TODO: Quickbinds editor: max health, max level, PP restore, etc.
 # TODO: Make CLI not as painful
 
 

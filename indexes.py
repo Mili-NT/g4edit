@@ -24,6 +24,10 @@ offsets = {
             'item': (0x02,0x03),
             'item_amount':(0x02,0x03),
         }
+"""The items index maps item IDs to item names
+
+https://bulbapedia.bulbagarden.net/wiki/List_of_items_by_index_number_(Generation_IV)
+"""
 items = {
     0:'None',
     1:'Master Ball',
@@ -563,6 +567,7 @@ items = {
     535:'Blue Orb',
     536:'Enigma Stone',
 }
+# The shifts index maps shift values to block order strings
 shifts = {
                 0:('ABCD','ABCD'),
                 1:('ABDC','ABDC'),
@@ -589,6 +594,11 @@ shifts = {
                 22:('DCAB','CDBA'),
                 23:('DCBA','DCBA'),
                 }
+""""
+The pkmn index maps species ID (aka national dex number) to the species name
+
+https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_index_number_(Generation_IV)
+"""
 pkmn = {
     0:'None',
     1:'Bulbasaur',
@@ -1099,6 +1109,17 @@ pkmn = {
     506:'Rotom',
     507:'Rotom',
 }
+"""
+~~ Experience Indexes ~~
+[1]: XP growth maps the level to an array containing the minimum amount of XP that each if the 6 growth groups needs at 
+that level. See [3].
+
+[2]. The growth_rates index maps the growth category to an array containing all pokemon names in that group
+
+[3]. group_indexes matches the growth category to its position in the xp_growth value arrays
+
+https://bulbapedia.bulbagarden.net/wiki/Experience
+"""
 xp_growth = {
 0: [0, 0, 0, 0, 0, 0],
 1: [8, 15, 4, 9, 6, 10],
@@ -1210,6 +1231,11 @@ growth_rates = {
     'fluctuating':['Breloom', 'Corphish', 'Crawdaunt', 'Drifblim', 'Drifloon', 'Gulpin', 'Hariyama', 'Illumise', 'Makuhita', 'Seviper', 'Shroomish', 'Swalot', 'Wailmer', 'Wailord'],
 }
 group_indexes = {'medium_fast':0, 'erratic':1, 'fluctuating':2, 'medium_slow':3, 'fast':4, 'slow':5}
+"""
+Types index matches all pokemon to their types
+
+I got this by scraping the bulbapedia pokedex page for gen IV
+"""
 types = {
     '-----':'Normal',
     'Bulbasaur':('Grass', 'Poison'),
@@ -1708,6 +1734,12 @@ types = {
     'Pokémon Egg':'???',
     'Manaphy Egg':'???',
 }
+"""
+The moves index maps the move id to a dictionary containing the move info.
+The value dictionary contains the name, type, category, pp, power, and accuracy
+
+https://bulbapedia.bulbagarden.net/wiki/List_of_moves
+"""
 moves = {
     0:{'name': 'None', 'type': 'None', 'category': 'None', 'pp': 0, 'power': '0', 'accuracy': '0'},
     1:{'name': 'Pound', 'type': 'Normal', 'category': 'Physical', 'pp': 35, 'power': '40', 'accuracy': '100%'},
@@ -2178,6 +2210,11 @@ moves = {
     466:{'name': 'Ominous Wind', 'type': 'Ghost', 'category': 'Special', 'pp': 5, 'power': '60', 'accuracy': '100%'},
     467:{'name': 'Shadow Force', 'type': 'Ghost', 'category': 'Physical', 'pp': 5, 'power': '120', 'accuracy': '100%'},
 }
+"""
+Maps ability IDs to a tuple of the ability name and ability description
+
+https://bulbapedia.bulbagarden.net/wiki/Ability#List_of_Abilities
+"""
 abilities = {
 0: ('None', 'None'),
 91: ('Adaptability', 'Powers up moves of the same type as the Pokémon.'),
@@ -2304,6 +2341,11 @@ abilities = {
 73: ('White Smoke', 'The Pokémon is protected by its white smoke, which prevents other Pokémon from lowering its stats.'),
 25: ('Wonder Guard', 'Its mysterious power only lets supereffective moves hit the Pokémon.'),
 }
+"""
+Maps location IDs to location names
+
+https://bulbapedia.bulbagarden.net/wiki/List_of_locations_by_index_number_(Generation_IV)
+"""
 locations = {
     0:'Mystery Zone',
     1:'Twinleaf Town',
@@ -2632,6 +2674,7 @@ locations = {
     3075:'Event Pokémon',
     3076:'Concert Event',
 }
+# Maps nature values to the names
 natures = {
     0:'Hardy',
     1:'Lonely',
@@ -2659,6 +2702,12 @@ natures = {
     23:'Careful',
     24:'Quirky',
 }
+"""
+The gender_ratios index maps a pokemon's species id (Ndex number) to it's gender ratio, which is used to determine
+gender probability.
+
+I got this by scraping https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_by_gender_ratio
+"""
 gender_ratios = {
     0:255,
     1:31,
@@ -3155,6 +3204,7 @@ gender_ratios = {
     492:255,
     493:255,
 }
+# Maps a badge index to badge names. The badge value is the sum of all indexes the player has gotten.
 badge_dict = {
     1: "Coal",
     2: "Forest",
@@ -3165,6 +3215,7 @@ badge_dict = {
     64: "Icicle",
     128: "Beacon",
 }
+# Maps badge names to color codes
 badge_to_color = {
     "Coal Badge": "\033[1;40;100m",
     "Forest Badge": "\033[1;37;42m",

@@ -278,6 +278,14 @@ def list_to_chunks(array, num_of_chunks):
     """
     num_of_chunks = max(1, num_of_chunks)
     return list((array[i:i + num_of_chunks] for i in range(0, len(array), num_of_chunks)))
+
+def generate_pad(offset_size, value_size):
+    size = offset_size-value_size*2
+    size = size-1 if size == 1 else size
+    if size == 0:
+        return [0xFF] + [0x00 for _ in range(size)]
+    else:
+        return [0xFF, 0xFF] + [0x00 for _ in range(size)]
 # Read/Write Functions
 def read_from_offset(whole, offset):
     """

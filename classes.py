@@ -56,7 +56,8 @@ class interface:
         print(self.header)
         print(f"{self.save.player.display_trainer_info()}\n{self.save.player.display_party_info()}")
 class pokemon:
-    def __init__(self, data_block, slotnumber=0):
+    def __init__(self, data_block, trainer_info, slotnumber=0):
+        self.trainer_info = trainer_info
         self.whole = data_block
         self.decrypted = df.pokemon_conversion(data_block)
         self.pokemon = self.decrypted[0]
@@ -64,7 +65,6 @@ class pokemon:
         self.checksum = self.decrypted[2]
         self.slotnumber = slotnumber
         # General
-        # genderless = 4, Female = 2, Male = 0,
         self.general_info = {
             'species_id': df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0],
             'species': df.get_index(indexes.pkmn, df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]),
@@ -125,11 +125,10 @@ class pokemon:
             if df.get_index(indexes.pkmn, specid) in indexes.growth_rates[category]:
                 rate = category
         return indexes.xp_growth[level-1][indexes.group_indexes[rate]]
-    def set_new_pv(self, gender=None, nature=None, maintain_block_order=True, shiny=False):
+    def set_new_pv(self, gender=None, nature=None, shiny=False):
         """
         :param gender: 'm' for male, 'f' for female
         :param nature: string of nature to change to, i.e: 'hardy', 'adamant', 'lonely'
-        :param maintain_block_order: Discards PVs that results in a different Shift Value (SV) than the original
         :param shiny: True to generate a shiny PV, else False
         :return: New PV matching specifications passed as params
         """
@@ -145,8 +144,6 @@ class pokemon:
                 continue
             if shiny and self.check_shiny(new_pv) is False:
                 continue
-            if maintain_block_order and ((self.pid & 0x3E000) >> 0xD) % 24 != ((new_pv & 0x3E000) >> 0xD) % 24:
-                continue
             if new_pv > 4294967295:
                 continue
             print(f"New PV: {new_pv}")
@@ -155,12 +152,12 @@ class pokemon:
             cont = input("Does this look correct? [y]/[n]: ")
             if cont.lower() in ['y', 'yes']:
                 if ng == 'Genderless':
-                    self.update(0x40, 4)
+                    df.write_to_offset(self.pokemon, 0x40, 4)
                 elif ng == 'Female':
-                    self.update(0x40, 2)
+                    df.write_to_offset(self.pokemon,0x40, 2)
                 elif ng == 'Male':
-                    self.update(0x40, 0)
-                self.update((0x00, 0x04), df.byte_conversion(new_pv, 'I', encode=True))
+                    df.write_to_offset(self.pokemon,0x40, 0)
+                df.write_to_offset(self.pokemon,(0x00, 0x04), df.byte_conversion(new_pv, 'I', encode=True))
                 self.pid = new_pv
                 break
             else:
@@ -173,14 +170,7 @@ class pokemon:
         isShiny = tid ^ sid ^ p1 ^ p2
         return True if isShiny < 8 else False
     # UPDATE/SAVE
-    def update(self, offset, value):
-        if isinstance(offset, int):
-            self.pokemon[offset] = value
-        else:
-            count = 0
-            for i in range(offset[0], offset[1]):
-                self.pokemon[i] = value[count]
-                count += 1
+    def update(self):
         self.general_info = {
             'species_id': df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0],
             'species': df.get_index(indexes.pkmn, df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]),
@@ -249,7 +239,6 @@ class pokemon:
                 f"Special Defense: {self.battle['spec_defense']}",
                 misc.get_padded("Moves")
             ]
-            misc.log(f"{self.battle['moveset']}", 'd')
             for index,item in enumerate(self.battle['moveset']):
                 lines.append(f"[{index+1}]: {item['name']} ({item['pp'][0]}pp/{item['pp'][1]}pp)")
             return '\n'.join(lines), lines
@@ -264,6 +253,7 @@ class pokemon:
     # EDITS
     def edit(self):
         while True:
+            self.update()
             misc.clear()
             print(misc.get_padded(f"Edit Menu For Slot {self.slotnumber}"))
             self.display_pkmn()
@@ -286,6 +276,7 @@ class pokemon:
     # EDIT SUBMENUS
     def edit_gen(self):
         while True:
+            self.update()
             misc.clear()
             print(misc.get_padded(f"General Info for Slot {self.slotnumber}"))
             self.display('general')
@@ -311,7 +302,10 @@ class pokemon:
                 while True:
                     new_species = input("Enter the name of the new species: ").title()
                     if df.is_valid(indexes.pkmn, new_species, is_val=True):
-                        self.update((0x08,0x0A), df.get_index(indexes.pkmn, new_species, from_val=True))
+                        spec_id = df.get_index(indexes.pkmn, new_species, from_val=True)
+                        spec_id_to_bytes = df.byte_conversion(spec_id, 'H', encode=True)
+                        misc.log(f"New SPECID: {spec_id}. Writing {spec_id_to_bytes} to 0x08:0x0A")
+                        df.write_to_offset(self.pokemon, (0x08,0x0A), spec_id_to_bytes)
                         break
                     else:
                         print("No such pokemon found. Only pokemon from Gen I -> Gen IV are valid.")
@@ -326,7 +320,7 @@ class pokemon:
                     else:
                         print("Name must be greater than 0 and no more than 10 characters.")
                         continue
-                    self.update((0x48, 0x5D), encoded)
+                    df.write_to_offset(self.pokemon, (0x48, 0x5D), encoded)
                     break
             elif element in ['3', 'gender']:
                 while True:
@@ -356,7 +350,7 @@ class pokemon:
                     new_item = input("Enter the name of the item: ")
                     if df.is_valid(indexes.items, new_item, is_val=True):
                         itemid = df.get_index(indexes.items, new_item, from_val=True)
-                        self.update(0x83, itemid)
+                        df.write_to_offset(self.pokemon, 0x83, itemid)
                         break
                     else:
                         print("No such item found.")
@@ -370,7 +364,7 @@ class pokemon:
                     else:
                         new_ball_id = df.get_index(indexes.items, new_ball, from_val=True)
                     if new_ball_id:
-                        self.update(0x83, new_ball_id)
+                        df.write_to_offset(self.pokemon, 0x83, new_ball_id)
                         break
                     else:
                         continue
@@ -378,9 +372,9 @@ class pokemon:
                 while True:
                     new_pkrus = input("Enable pokerus: [y]/[n]: ")
                     if new_pkrus.lower() in ['y', 'yes']:
-                        self.update(0x82, 1)
+                        df.write_to_offset(self.pokemon, 0x82, 1)
                     elif new_pkrus.lower() in ['n', 'no']:
-                        self.update(0x82, 1)
+                        df.write_to_offset(self.pokemon, 0x82, 1)
                     else:
                         print("Invalid option.")
                         continue
@@ -396,7 +390,7 @@ class pokemon:
                         print("Invalid location name.")
                         continue
                     encoded = df.byte_conversion(new_loc_id, 'H', encode=True)
-                    self.update((0x46,0x48), encoded)
+                    df.write_to_offset(self.pokemon, (0x46,0x48), encoded)
                     break
             elif element in ['9', 'shinyness']:
                 while True:
@@ -411,6 +405,7 @@ class pokemon:
                     break
     def edit_ot(self):
         while True:
+            self.update()
             misc.clear()
             print(misc.get_padded(f"OT Info for Slot {self.slotnumber}"))
             self.display('ot')
@@ -423,29 +418,57 @@ class pokemon:
                 while True:
                     try:
                         id_type = 'trainer' if element == '1' else 'secret'
-                        new_id = int(input(f"Enter new {id_type} ID: "))
-                        if 0 < new_id <= 65535:
+                        new_id = input(f"Enter new {id_type} ID (leave blank to set your current ID): ")
+                        if new_id == '':
+                            new_id = self.trainer_info['tid'] if id_type == 'trainer' else self.trainer_info['sid']
                             encoded = df.byte_conversion(new_id, 'H', encode=True)
                             if id_type == 'trainer':
-                                self.update((0x0C,0x0E), encoded)
+                                df.write_to_offset(self.pokemon, (0x0C, 0x0E), encoded)
                             else:
-                                self.update((0x0E,0x10), encoded)
-                            break
+                                df.write_to_offset(self.pokemon, (0x0E, 0x10), encoded)
                         else:
-                            raise ValueError
+                            new_id = int(new_id)
+                            if 0 < new_id <= 65535:
+                                encoded = df.byte_conversion(new_id, 'H', encode=True)
+                                if id_type == 'trainer':
+                                    df.write_to_offset(self.pokemon, (0x0C,0x0E), encoded)
+                                else:
+                                    df.write_to_offset(self.pokemon, (0x0E,0x10), encoded)
+                                break
+                            else:
+                                raise ValueError
                     except Exception as e:
                         misc.log(e, 'error')
                         print(f"New {'trainer' if element == '1' else 'secret'} ID must be greater than 0 and less than 65535.")
                         continue
             elif element == '3':
-                pass
+                while True:
+                    try:
+                        new_name = input("New trainer name (leave blank to apply your name as OT name): ")
+                        if new_name == '':
+                            misc.log(self.trainer_info['name'], 'd')
+                            encoded = df.char_conversion(self.trainer_info['name'],
+                                                         encode=True,
+                                                         pad=df.generate_pad(15, len(self.trainer_info['name'])))
+                            misc.log(df.bytearr_to_hexstring(encoded), 'd')
+                            df.write_to_offset(self.pokemon, (0x68, 0x77), encoded)
+                        else:
+                            if len(new_name) < 0 or len(new_name) > 7:
+                                raise ValueError
+                            encoded = df.char_conversion(new_name, encode=True, pad=df.generate_pad(15, len(new_name)))
+                            df.write_to_offset(self.pokemon, (0x68,0x77), encoded)
+                        break
+                    except Exception as e:
+                        misc.log(e, 'e')
+                        print("OT name must be greater than 0 and less than 7 characters in length.")
+                        continue
             else:
                 break
-            continue
     def edit_stats(self):
         # SUBMENU SUBMENUS (have I gone too deep here?)
         def battle_info_subeditor():
             while True:
+                self.update()
                 misc.clear()
                 print('\n'.join(self.display('stats')[1][0:5]))
                 print(misc.get_padded("Edit"))
@@ -466,10 +489,10 @@ class pokemon:
                             new_lvl = int(input("Enter new level: "))
                             if new_lvl < 0 or new_lvl > 100:
                                 raise ValueError
-                            self.update(0x8C, new_lvl)
+                            df.write_to_offset(self.pokemon, 0x8C, new_lvl)
                             new_xp = self.xp_min(self.general_info['species_id'], new_lvl)
                             to_bytes = df.byte_conversion(new_xp, 'I', encode=True)
-                            self.update((0x10,0x13), to_bytes)
+                            df.write_to_offset(self.pokemon, (0x10,0x13), to_bytes)
                             break
                         except Exception as e:
                             misc.log(e, 'e')
@@ -485,7 +508,7 @@ class pokemon:
                                     new_ability_id = df.get_index(indexes.abilities, x, from_val=True)
                             if new_ability_id == 0:
                                 raise ValueError
-                            self.update(0x15, new_ability_id)
+                            df.write_to_offset(self.pokemon, 0x15, new_ability_id)
                             break
                         except Exception as e:
                             misc.log(e, 'e')
@@ -498,7 +521,7 @@ class pokemon:
                             new_hp = int(input(f"Enter new HP value (less than {self.battle['max_hp']}): "))
                             if new_hp < 0 or new_hp > self.battle['max_hp']:
                                 raise ValueError
-                            self.update((0x8E,0x8F), df.byte_conversion(new_hp, 'B', encode=True))
+                            df.write_to_offset(self.pokemon, (0x8E,0x8F), df.byte_conversion(new_hp, 'B', encode=True))
                             break
                         except Exception as e:
                             misc.log(e, 'e')
@@ -507,6 +530,7 @@ class pokemon:
                 continue
         def stats_subeditor():
             while True:
+                self.update()
                 misc.clear()
                 print('\n'.join(self.display('stats')[1][5:12]))
                 print(misc.get_padded("Edit"))
@@ -539,6 +563,7 @@ class pokemon:
                 continue
         def moves_subeditor():
             while True:
+                self.update()
                 misc.clear()
                 print('\n'.join(self.display('stats')[1][12:len(self.display('stats')[1])]))
                 print("['back' to return to previous menu.]")
@@ -584,7 +609,7 @@ class pokemon:
                             movelist = [x for x in self.pokemon[0x28:0x2F]]
                             movelist[position*2] = wrapped_id[0]
                             movelist[(position*2)+1] = wrapped_id[1]
-                            self.update((0x28,0x2F), bytearray(movelist))
+                            df.write_to_offset(self.pokemon, (0x28,0x2F), bytearray(movelist))
                         elif move_edit == '2':
                             print(f"Current PP: {move['pp'][0]} out of maximum {move['pp'][1]}")
                             while True:
@@ -600,11 +625,12 @@ class pokemon:
                                 break
                             pp = [x for x in self.pokemon[0x30:0x34]]
                             pp[position] = new_pp
-                            self.update((0x30, 0x34), bytearray(pp))
+                            df.write_to_offset(self.pokemon, (0x30, 0x34), bytearray(pp))
                         else:
                             continue
                         break
         while True:
+            self.update()
             misc.clear()
             print(self.display('stats')[0])
             opts = {
@@ -626,15 +652,15 @@ class pokemon:
             elif edit_choice.lower() == 'back':
                 break
 class party:
-    def __init__(self, party_block, saveobj):
-        self.saveobj = saveobj
+    def __init__(self, party_block, trainer_info):
+        self.trainer_info = trainer_info
         self.whole = party_block
         self.in_party = self.whole[0x9C]
         self.contents = self.load_party()
     def load_party(self):
         blocks = [self.whole[0:236], self.whole[236:472], self.whole[472:708],
                   self.whole[708:944], self.whole[944:1180], self.whole[1180:1416]]
-        return {index+1:pokemon(data, index+1) for index,data in enumerate(blocks)}
+        return {index+1:pokemon(data, self.trainer_info, index+1) for index,data in enumerate(blocks)}
     def save_party(self):
         blocks = [pkmn.save() for pkmn in self.contents.values()]
         combined = df.combine_bytestrings(blocks)
@@ -679,10 +705,14 @@ class trainer:
             "badges": 0x82,
         }
         self.trainer_info = self.get_trainer_info()
-        self.trainer_party = party(self.whole[0xA0:0x628], self.saveobj)
+        self.trainer_party = party(self.whole[0xA0:0x628], self.trainer_info)
     # EDIT
+    def update(self):
+        self.trainer_info = self.get_trainer_info()
+        self.trainer_party = party(self.whole[0xA0:0x628], self.trainer_info)
     def edit(self):
         while True:
+            self.update()
             misc.clear()
             print(misc.get_padded("Trainer Edit"))
             opts = {
@@ -724,17 +754,17 @@ class trainer:
                         continue
             if element == "trainer_name":
                 while True:
-                    new_name = input("New trainer name: ")
-                    if len(new_name) == 7:
-                        encoded = df.char_conversion(data=new_name, encode=True, pad=[255])
-                    elif 0 < len(new_name) < 7:
-                        encoded = df.char_conversion(data=new_name, encode=True, pad=[255, 255] + [0 for _ in range((15-len(new_name*2))-2)])
-                    else:
+                    try:
+                        new_name = input("New trainer name: ")
+                        encoded = df.char_conversion(data=new_name,
+                                                     encode=True,
+                                                     pad=df.generate_pad(15, len(new_name)))
+                        self.saveobj.update_offset(self.offsets['trainer_name'], bytearray(encoded))
+                        break
+                    except Exception as e:
+                        misc.log(e, 'e')
                         print("Character name must be greater than 0 and less than 7 characters in length.")
-                        misc.log("Incorrect character name entered.", 'i')
                         continue
-                    self.saveobj.update_offset(self.offsets['trainer_name'], bytearray(encoded))
-                    break
             if element == "trainer_gender":
                 while True:
                     new_gender = input("New gender (Male/Female): ")
@@ -780,7 +810,6 @@ class trainer:
                     except Exception:
                         print("Enter valid indexes.")
                         continue
-            self.trainer_info = self.get_trainer_info()
             if ele_input == 'back':
                 break
             else:
