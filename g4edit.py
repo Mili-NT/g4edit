@@ -4,6 +4,8 @@ import sys
 import misc
 import classes
 
+# TODO: FINISH STATS SUBEDITOR
+# TODO: PP Up implementation
 # TODO: Create new pokemon from empty
 # TODO: Inventory
 
