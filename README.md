@@ -9,13 +9,14 @@ With it you can modify:
 * Money
 * Party
 
-**Pokemon Modification**
+**Pokemon Modifications**
 * Pokemon Info (Name, Species, Gender)
 * Shinyness and Pokerus
 * Nature
 * Held Items
 * Battle Info (Level, Moves, HP, Stats, etc.)
 * And More
+
 
 ## Usage:
 `python3 g4edit.py <path to .sav file>`
