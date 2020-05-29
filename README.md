@@ -1,6 +1,8 @@
 # g4edit
 G4Edit is a save editor for pokemon generation 4 games (Diamond, Pearl, Platinum).
+
 With it you can modify:
+
 **Trainer Modifications**
 * Trainer info (Name, Gender, TID, SID)
 * Badges Collected
