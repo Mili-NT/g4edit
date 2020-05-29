@@ -15,7 +15,6 @@ class interface:
               f"{self.save.player.display_party_info()}")
         self.command()
     def command(self):
-        # TODO: Something needs to be done here. Way too tangled with ifs/elifs/elses
         while True:
             print(misc.get_padded("Command Input"))
             print("[1]. Edit Trainer\n[2]. Edit Party\n[3]. Save\n[4]. Exit")
@@ -663,21 +662,17 @@ class party:
             misc.clear()
             print(misc.get_padded("Party Edit"))
             for x in self.contents.keys():
-                print(f"[{x}]: {self.contents[x].general_info['name']}")
-            print(f"['back' to return to main menu or 'save' to save modified party.]")
+                print(f"Slot #{x}: {self.contents[x].general_info['name']}")
+            print(f"['back' to return to main menu.]")
             try:
                 print(misc.get_padded("Command Input"))
                 select = input("Enter index corresponding to pokemon to modify: ")
                 if select.lower() == 'back':
-                    sav = input("Edited data must be saved, or it will be lost. Save data? [y]/[n]: ")
-                    if sav.lower() in ['y', 'yes']:
-                        self.save_party()
-                    break
-                elif select.lower() == 'save':
                     self.save_party()
-                    continue
+                    break
                 else:
                     self.contents[int(select)].edit()
+                    self.save_party()
                     continue
             except Exception as e:
                 misc.log(e, 'e')
