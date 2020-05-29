@@ -109,6 +109,22 @@ class pokemon:
             else:
                 moves[x]['pp'] = (pp[x], moves[x]['pp'][1])
         return moves
+    def xp_to_next_lvl(self, specid, level):
+        if level == 100:
+            return 0
+        rate = ''
+        for category in indexes.growth_rates.keys():
+            if df.get_index(indexes.pkmn, specid) in indexes.growth_rates[category]:
+                rate = category
+        return indexes.xp_growth[level][indexes.group_indexes[rate]] - indexes.xp_growth[level-1][indexes.group_indexes[rate]]
+    def xp_min(self, specid, level):
+        if level <= 1:
+            return 0
+        rate = ''
+        for category in indexes.growth_rates.keys():
+            if df.get_index(indexes.pkmn, specid) in indexes.growth_rates[category]:
+                rate = category
+        return indexes.xp_growth[level-1][indexes.group_indexes[rate]]
     def set_new_pv(self, gender=None, nature=None, maintain_block_order=True, shiny=False):
         """
         :param gender: 'm' for male, 'f' for female
@@ -221,7 +237,7 @@ class pokemon:
             lines = [
                 misc.get_padded(f"Battle Info for Slot {self.slotnumber}"),
                 f"Level: {self.battle['level']}",
-                f"Experience: {self.battle['xp']}",
+                f"Experience: {self.battle['xp']} ({self.xp_to_next_lvl(self.general_info['species_id'], self.battle['level'])} to next level)",
                 f"Ability: {self.battle['ability'][0]}\n{self.battle['ability'][1]}",
                 f"Current HP: {self.battle['current_hp']}",
                 misc.get_padded("Stats"),
@@ -435,9 +451,8 @@ class pokemon:
                 print(misc.get_padded("Edit"))
                 battle_opts = {
                     '1': 'Level',
-                    '2': 'Experience',
-                    '3': 'Ability',
-                    '4': 'Current HP'
+                    '2': 'Ability',
+                    '3': 'Current HP'
                 }
                 for i in battle_opts:
                     print(f"[{i}]: {battle_opts[i]}")
@@ -446,13 +461,49 @@ class pokemon:
                 if battle_input == 'back':
                     break
                 elif battle_input.lower() in ['1', 'level', 'l', 'lvl']:
-                    pass
-                elif battle_input.lower() in ['2', 'experience', 'e', 'xp']:
-                    pass
-                elif battle_input.lower() in ['3', 'ability', 'a']:
-                    pass
-                elif battle_input.lower() in ['4', 'current hp', 'hp', 'c']:
-                    pass
+                    while True:
+                        try:
+                            new_lvl = int(input("Enter new level: "))
+                            if new_lvl < 0 or new_lvl > 100:
+                                raise ValueError
+                            self.update(0x8C, new_lvl)
+                            new_xp = self.xp_min(self.general_info['species_id'], new_lvl)
+                            to_bytes = df.byte_conversion(new_xp, 'I', encode=True)
+                            self.update((0x10,0x13), to_bytes)
+                            break
+                        except Exception as e:
+                            misc.log(e, 'e')
+                            print("Value must be between 0 and 100.")
+                            continue
+                elif battle_input.lower() in ['2', 'ability', 'a']:
+                    while True:
+                        try:
+                            new_ability = input("Enter the name of the ability: ")
+                            new_ability_id = 0
+                            for x in indexes.abilities.values():
+                                if x[0].lower() == new_ability.lower():
+                                    new_ability_id = df.get_index(indexes.abilities, x, from_val=True)
+                            if new_ability_id == 0:
+                                raise ValueError
+                            self.update(0x15, new_ability_id)
+                            break
+                        except Exception as e:
+                            misc.log(e, 'e')
+                            print("No such ability found.")
+                            print("Check bulbapedia or indexes.py for a list of abilities.")
+                            continue
+                elif battle_input.lower() in ['3', 'current hp', 'hp', 'c']:
+                    while True:
+                        try:
+                            new_hp = int(input(f"Enter new HP value (less than {self.battle['max_hp']}): "))
+                            if new_hp < 0 or new_hp > self.battle['max_hp']:
+                                raise ValueError
+                            self.update((0x8E,0x8F), df.byte_conversion(new_hp, 'B', encode=True))
+                            break
+                        except Exception as e:
+                            misc.log(e, 'e')
+                            print(f"Value must be greater or equal to than 0 and less than {self.battle['max_hp']}")
+                            continue
                 continue
         def stats_subeditor():
             while True:
@@ -570,7 +621,7 @@ class pokemon:
                 battle_info_subeditor()
             elif edit_choice.lower() in ['2', 'stats']:
                 stats_subeditor()
-            elif edit_choice.lower() in ['3', 'stats']:
+            elif edit_choice.lower() in ['3', 'moves']:
                 moves_subeditor()
             elif edit_choice.lower() == 'back':
                 break

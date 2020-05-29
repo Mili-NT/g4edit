@@ -1,6 +1,7 @@
 import string
 import struct
 import indexes
+
 # Important Conversion Functions
 def char_conversion(data, encode=False, pad=None):
     """

@@ -4,10 +4,14 @@ import sys
 import misc
 import classes
 
-# TODO: FINISH STATS SUBEDITOR
+# TODO: !!! FINISH STATS SUBEDITOR !!!
+# TODO: Quickbinds editor: max health, max level, PP restore, etc.
 # TODO: PP Up implementation
 # TODO: Create new pokemon from empty
 # TODO: Inventory
+# TODO: IV/EV implementation
+# TODO: Make CLI not as painful
+
 
 # IMPORTANT FUNCTIONS
 def load_file(fp):
@@ -58,4 +62,3 @@ if __name__ == '__main__':
     except IndexError:
         misc.log("No filepath passed", 'info')
         main()
-
