@@ -20,7 +20,7 @@ TODO list
 # Not as High Priority:
 # TODO: Find a way to shrink blockspace on PV generation (and update docstring for gender)
 # TODO: Quickbinds editor: max health, max level, PP restore, etc.
-# TODO: Make CLI not as painful
+# TODO: Make CLI not as painful (Restructing editing to be classes?)
 
 
 # IMPORTANT FUNCTIONS

@@ -11,44 +11,34 @@ class interface:
         self.save = saveobj
         self.header = misc.get_title()
         print(self.header)
-        print(f"{self.save.player.display_trainer_info()}\n{self.save.player.display_party_info()}")
+        print(f"{self.save.player.display_trainer_info()}\n"
+              f"{self.save.player.display_party_info()}")
         self.command()
     def command(self):
         # TODO: Something needs to be done here. Way too tangled with ifs/elifs/elses
         while True:
-            cmd = input("Command (h for opts): ")
-            if cmd == 'edit':
-                while True:
-                    editchoice = input("Edit which: [t]rainer or [p]arty: ")
-                    if editchoice.lower() in ['t', 'trainer', '1']:
-                        self.save.player.edit()
-                    elif editchoice.lower() in ['p', 'party', 'pkmn', '2']:
-                        self.save.player.trainer_party.edit()
-                    else:
-                        continue
-                    break
-            elif cmd in ['edit trainer', 'edit t']:
+            print(misc.get_padded("Command Input"))
+            print("[1]. Edit Trainer\n[2]. Edit Party\n[3]. Save\n[4]. Exit")
+            cmd = input("Command: ").lower()
+            if cmd in ['1', 'edit trainer', 'edit t']:
                 try:
                     self.save.player.edit()
                 except Exception as e:
                     misc.log(e, 'e')
-            elif cmd in ['edit party', 'edit p', '1', '2', '3', '4', '5', '6']:
+            elif cmd in ['2', 'edit party', 'edit p']:
                 try:
                     self.save.player.trainer_party.edit()
                 except Exception as e:
                     misc.log(e, 'e')
-            elif cmd == 'save':
+            elif cmd in ['3', 'save']:
                 self.save.save()
                 self.refresh()
-            elif cmd == 'exit':
+            elif cmd in ['4', 'exit']:
                 print("Warning! Unsaved modifications will disappear!")
                 if input("Save? [y/n]: ").lower() in ['y', 'yes']:
                     self.save.save()
                 exit()
             else:
-                print("Enter 'edit' to access the editor prompt")
-                print("Enter 'edit t' or 'edit p' to directly edit trainer and party.")
-                print("Enter 'exit' to exit and save or 'save' to save directly.")
                 continue
             self.refresh()
     def refresh(self):
@@ -652,7 +642,8 @@ class pokemon:
             elif edit_choice.lower() == 'back':
                 break
 class party:
-    def __init__(self, party_block, trainer_info):
+    def __init__(self, party_block, saveobj, trainer_info):
+        self.saveobj = saveobj
         self.trainer_info = trainer_info
         self.whole = party_block
         self.in_party = self.whole[0x9C]
@@ -673,8 +664,9 @@ class party:
             print(misc.get_padded("Party Edit"))
             for x in self.contents.keys():
                 print(f"[{x}]: {self.contents[x].general_info['name']}")
-            print(f"['back' to return to main menu, or 'save' to save modified party.]")
+            print(f"['back' to return to main menu or 'save' to save modified party.]")
             try:
+                print(misc.get_padded("Command Input"))
                 select = input("Enter index corresponding to pokemon to modify: ")
                 if select.lower() == 'back':
                     sav = input("Edited data must be saved, or it will be lost. Save data? [y]/[n]: ")
@@ -705,11 +697,11 @@ class trainer:
             "badges": 0x82,
         }
         self.trainer_info = self.get_trainer_info()
-        self.trainer_party = party(self.whole[0xA0:0x628], self.trainer_info)
+        self.trainer_party = party(self.whole[0xA0:0x628], self.saveobj, self.trainer_info)
     # EDIT
     def update(self):
         self.trainer_info = self.get_trainer_info()
-        self.trainer_party = party(self.whole[0xA0:0x628], self.trainer_info)
+        self.trainer_party = party(self.whole[0xA0:0x628], self.saveobj, self.trainer_info)
     def edit(self):
         while True:
             self.update()
@@ -889,7 +881,7 @@ class trainer:
             f"{misc.cstring(self.trainer_info['gym_progress'][0], color='blu')} => {misc.cstring(self.trainer_info['gym_progress'][1], color='blu')}",
             ]
 
-        display = "\n".join(info_lines) + ''.join(game_progress) + '\n' + ''.join(['-' for _ in range(56)])
+        display = "\n".join(info_lines) + ''.join(game_progress)
         return display
     def display_party_info(self):
         party_lines = [
@@ -901,7 +893,6 @@ class trainer:
             else:
                 info = f"({self.trainer_party.contents[slot].general_info['gender']} {self.trainer_party.contents[slot].general_info['species']})"
             party_lines.append(f"[{slot}]: {self.trainer_party.contents[slot].general_info['name']} {info}")
-        party_lines.append(''.join(['-' for _ in range(56)]))
         return "\n".join(party_lines)
 class save:
     def __init__(self, savedata, filepath):
