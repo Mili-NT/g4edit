@@ -4,7 +4,15 @@ import sys
 import misc
 import classes
 
-# TODO: !!! FINISH STATS SUBEDITOR !!!
+"""
+Bugs
+"""
+# TODO: Subscription error when calling update() on species change
+# TODO: Changing gender doesn't retain shinyness
+"""
+TODO list
+"""
+# TODO: FINISH STATS SUBEDITOR
 # TODO: Quickbinds editor: max health, max level, PP restore, etc.
 # TODO: PP Up implementation
 # TODO: Create new pokemon from empty

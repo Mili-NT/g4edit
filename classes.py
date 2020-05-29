@@ -309,7 +309,7 @@ class pokemon:
                 break
             elif element in ['1', 'species']:
                 while True:
-                    new_species = input("Enter the name of the new species: ").lower()
+                    new_species = input("Enter the name of the new species: ").title()
                     if df.is_valid(indexes.pkmn, new_species, is_val=True):
                         self.update((0x08,0x0A), df.get_index(indexes.pkmn, new_species, from_val=True))
                         break
