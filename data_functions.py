@@ -1,3 +1,4 @@
+import misc
 import string
 import struct
 import indexes
@@ -6,8 +7,8 @@ import indexes
 def char_conversion(data, encode=False, pad=None):
     """
     This function decodes the nasty proprietary character encoding scheme used by the game. For previous generations,
-    a similar but different two-byte character encoding was used. I was able to figure out that uppercase letters
-    have an offset of 22, and lowercase has an offset of 28. The symbols remain a mystery.
+    a similar but different two-byte character encoding was used, in sort of table format. I was able to figure out
+    that uppercase letters have an offset of 22, and lowercase has an offset of 28. The symbols remain a mystery.
 
     :param data: The data to be operated on. This is either bytes to decode or a string to encode
     :param encode: True to decode, False to decode
@@ -79,7 +80,7 @@ def byte_conversion(data, flag, encode=False):
     if encode is False:
         return struct.unpack(flag, data)
     else:
-        return struct.pack(flag, data)
+        return bytearray(struct.pack(flag, data))
 
 def pokemon_conversion(pkmn_struct, encode=False):
     """
@@ -92,7 +93,7 @@ def pokemon_conversion(pkmn_struct, encode=False):
     """
     ~~~~~ Pre-Cryptography ~~~~~
     There are 3 important components prior to performing cryptographic operations:
-    [1]: The checksum: A 2 byte integer loctated at 0x06:0x08 that is used to verify the data after encrpytion, and 
+    [1]: The checksum: A 2 byte integer loctated at 0x06:0x08 that is used to verify the data after encryption, and 
     serves as the INITIAL seed to the decryption function.
     
     [2]: The personality value (PV/PID): A 4-byte (32bit) integer that contains data about the gender, nature, 
@@ -117,6 +118,8 @@ def pokemon_conversion(pkmn_struct, encode=False):
     """
     personality_value = byte_conversion(pkmn_struct[0x00:0x04], "<I")[0]
     checksum = byte_conversion(pkmn_struct[0x06:0x08], "<H")[0]
+    misc.log(f"CHK: {checksum}", 'd')
+    misc.log(f"BYTES: {pkmn_struct[0x06:0x08]}", 'd')
     shift_value = ((personality_value & 0x3E000) >> 0xD) % 24
     order = indexes.shifts[shift_value][0]
     # Misc
@@ -146,7 +149,7 @@ def pokemon_conversion(pkmn_struct, encode=False):
         """
         # Implement the function with the passed seed
         seed = ((0xFFFFFFFF & (0x41C64E6D * seed)) + 0x00006073) & 0xFFFFFFFF
-        # We need the "upper 16 bits" of the above function, so we convert first shift the seed 16 bits to the right,
+        # We need the "upper 16 bits" of the above function, so we shift the seed 16 bits to the right,
         # then convert that to a 2-byte LITTLE-ENDIAN short. The return value is a tuple of (8 bits, 8 bits)
         bits = byte_conversion(seed >> 16, '<H', True)
         # Now we need to "apply the transformation: unencryptedByte = Y xor rand()" where rand() is our upper 16 bits
@@ -210,7 +213,7 @@ def byte_to_bit(data):
     If a bytearray is passed, it splits it into a linked list of bits.
 
     :param data: The byte or bytearray to decode to bits
-    :return: A list or linked list of bits
+    :return: A single string of bits or list of bits
     """
     # If the data is a bytearray:
     if isinstance(data, bytearray):
@@ -219,13 +222,13 @@ def byte_to_bit(data):
         # If the data is a single byte, return a singleton list.
         # This is added to prevent a singleton linked list with a singleton list as an element
         if len(x) == 1:
-            return [(x[0] >> i) & 1 for i in range(8)]
+            return ''.join([f"{(x[0] >> i) & 1}" for i in range(8)])
         else:
             # Return a linked list, with elements of length 8, for each byte in the array
-            return [[(byte >> i) & 1 for i in range(8)] for byte in [byte for byte in data]]
+            return [''.join([f"{(byte >> i) & 1}" for i in range(8)]) for byte in [byte for byte in data]]
     # If the data is a single int, aka a single byte that has been passed and automatically converted to an int:
     elif isinstance(data, int):
-        return [(data >> i) & 1 for i in range(8)]
+        return ''.join([f"{(data >> i) & 1}" for i in range(8)])
 
 def bytearr_to_hexstring(bytearr):
     """

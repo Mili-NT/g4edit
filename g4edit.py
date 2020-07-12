@@ -7,7 +7,7 @@ import classes
 """
 Bugs
 """
-# TODO: Changing gender doesn't retain shinyness
+
 """
 TODO list
 """
@@ -18,7 +18,6 @@ TODO list
 # TODO: IV/EV implementation
 # TODO: Inventory
 # Not as High Priority:
-# TODO: Find a way to shrink blockspace on PV generation (and update docstring for gender)
 # TODO: Quickbinds editor: max health, max level, PP restore, etc.
 # TODO: Make CLI not as painful (Restructing editing to be classes?)
 

@@ -116,41 +116,42 @@ class pokemon:
         return indexes.xp_growth[level-1][indexes.group_indexes[rate]]
     def set_new_pv(self, gender=None, nature=None, shiny=False):
         """
-        :param gender: 'm' for male, 'f' for female
+        :param gender: 0 for male, 1 for female
         :param nature: string of nature to change to, i.e: 'hardy', 'adamant', 'lonely'
         :param shiny: True to generate a shiny PV, else False
         :return: New PV matching specifications passed as params
         """
         gender_ratio = self.general_info['ratio']
         nature = nature if nature else self.pid % 25
+        gender = gender if gender is not None else (lambda opv: 1 if opv % 256 < gender_ratio else 0)(self.pid)
+        if shiny is False:
+            shiny = self.check_shiny(self.pid)
         while True:
             new_pv = random.getrandbits(32) & 0xffffffff
+            if new_pv > 4294967295:
+                continue
             if gender_ratio in [0, 254, 255] and new_pv % 256 != gender_ratio:
                 continue
-            elif (gender == 0 and new_pv % 256 < gender_ratio) or (gender == 1 and new_pv % 256 >= gender_ratio):
+            if (lambda pv: 1 if pv % 256 < gender_ratio else 0)(new_pv) != gender:
                 continue
             if new_pv % 25 != nature:
                 continue
             if shiny and self.check_shiny(new_pv) is False:
                 continue
-            if new_pv > 4294967295:
-                continue
-            print(f"New PV: {new_pv}")
-            ng = "Genderless" if gender_ratio == 255 else ('Male' if new_pv % 256 >= gender_ratio else 'Female')
-            print(f"Gender: {ng}\nNature: {df.get_index(indexes.natures, new_pv % 25)}\nShiny: {self.check_shiny(new_pv)}")
-            cont = input("Does this look correct? [y]/[n]: ")
-            if cont.lower() in ['y', 'yes']:
-                if ng == 'Genderless':
-                    df.write_to_offset(self.pokemon, 0x40, 4)
-                elif ng == 'Female':
-                    df.write_to_offset(self.pokemon,0x40, 2)
-                elif ng == 'Male':
-                    df.write_to_offset(self.pokemon,0x40, 0)
-                df.write_to_offset(self.pokemon,(0x00, 0x04), df.byte_conversion(new_pv, 'I', encode=True))
-                self.pid = new_pv
-                break
             else:
-                continue
+                ng = 'Female' if (lambda pv: 1 if pv % 256 < gender_ratio else 0)(new_pv) == 1 else 'Male'
+                print(f"Gender: {ng}\nNature: {df.get_index(indexes.natures, new_pv % 25)}\nShiny: {self.check_shiny(new_pv)}")
+                cont = input("Does this look correct? [y]/[n]: ")
+                if cont.lower() in ['y', 'yes']:
+                    if ng == 'Genderless':
+                        df.write_to_offset(self.pokemon, 0x40, 4)
+                    elif ng == 'Female':
+                        df.write_to_offset(self.pokemon,0x40, 2)
+                    elif ng == 'Male':
+                        df.write_to_offset(self.pokemon,0x40, 0)
+                    df.write_to_offset(self.pokemon,(0x00, 0x04), df.byte_conversion(new_pv, 'I', encode=True))
+                    self.pid = new_pv
+                    break
     def check_shiny(self, pv):
         tid = self.ot_info['tid']
         sid = self.ot_info['sid']
@@ -490,6 +491,7 @@ class pokemon:
                 elif battle_input.lower() in ['2', 'ability', 'a']:
                     while True:
                         try:
+                            # 46 for pressure,  105 for super luck
                             new_ability = input("Enter the name of the ability: ")
                             new_ability_id = 0
                             for x in indexes.abilities.values():
@@ -897,6 +899,28 @@ class save:
             self.player = trainer(self.allblocks, self)
         except Exception as e:
             misc.log(e, 'c', "Error creating trainer object!")
+    def validate_crc_checksums(self):
+        """
+        To compute an n-bit binary CRC, line the bits representing the input in a row,
+        and position the (n + 1)-bit pattern representing the CRC's divisor (called a "polynomial")
+        underneath the left-hand end of the row.
+        """
+        block_offsets = [(0x00000,0x0CF2C), (0x00000 + 0x40000,0x0CF2C + 0x40000),
+                         (0x0CF2C,0x1f110), (0x0CF2C + 0x40000,0x1f110 + 0x40000)]
+        for block_offset in block_offsets:
+            block = self.allblocks[block_offset[0]:block_offset[1]]
+            current_checksum = df.byte_conversion(block[-0x14:][-2:], 'H')[0]
+            high_order, low_order = 0xFF, 0xFF
+            for i in range(0, len(block)-0x14): # checksums are calculated from a whole block without taking the footer
+                current_byte = block[i] ^ high_order
+                current_byte ^= (current_byte >> 4)
+                high_order = (low_order ^ (current_byte >> 3) ^ (current_byte << 4)) & 255
+                low_order = (current_byte ^ (current_byte << 5)) & 255
+            correct_checksum = high_order << 8 | low_order
+            misc.log(f"{hex(block_offset[0]), hex(block_offset[1])}: {current_checksum} -> {correct_checksum}", 'd')
+            if current_checksum != correct_checksum:
+                corrected_block = block[:-2] + df.byte_conversion(correct_checksum, 'H', encode=True)
+                self.update_offset(block_offset, corrected_block)
     def update_offset(self, offset, value):
         self.allblocks = df.write_to_offset(self.allblocks, offset, value)
     def save(self):
@@ -910,6 +934,7 @@ class save:
                 misc.log("Invalid save option entered.", 'i')
                 print("Enter either 1 or 2.")
                 continue
+        self.validate_crc_checksums()
         if savecheck == 1:
             with open(self.path, 'wb') as f:
                 f.write(self.allblocks)
