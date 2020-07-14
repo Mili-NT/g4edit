@@ -233,11 +233,12 @@ def byte_to_bit(data):
 def bytearr_to_hexstring(bytearr):
     """
     This function converts a bytearray to a string of hex encoded data in the format you'd see in a hex editor.
+
     For example:
     bytearr => bytearray(b'>\x01I\x01W\x01X\x01\xff\xff\xff\xff\xff\xffR\x01\xff\xff\xb1\x01\xff')
     Decoded data: 3E 01 49 01 57 01 58 01 FF FF FF FF FF FF 52 01 FF FF B1 01 FF
 
-    I really only use this for debugging.
+    I really only use this for debugging, it makes it easy to compare data from a hex editor.
 
     :param bytearr: An array of bytes
     :return: Hex encoded data
@@ -283,8 +284,31 @@ def list_to_chunks(array, num_of_chunks):
     return list((array[i:i + num_of_chunks] for i in range(0, len(array), num_of_chunks)))
 
 def generate_pad(offset_size, value_size):
+    """
+    :param offset_size: The size of the offset to fill
+    :param value_size: The size of the value being padded
+    :return: An array with the correct termination and padded with 0x00s
+
+    !! NOTE THAT THIS JUST RETURNS THE PAD, NOT THE VALUE + PAD !!
+
+    Let's use the trainer name offset as an example. The offset is 0x15 bytes.
+    [0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00]
+
+    Let's say we are changing the name to AAA:
+    [0x61 0x61 0x61]
+
+    We would need the end bytearray to be:
+    [0x61 0x61 0x61 0xFF 0xFF 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00]
+
+    so the function would return this:
+    [0xFF 0xFF 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00]
+    """
+    # We get the number of 0x00s we need by doing multiplying the difference between the offset siz end value size by 2
+    # We multiply by 2 to account for the two byte character encoding scheme
     size = offset_size-value_size*2
     size = size-1 if size == 1 else size
+    # Strings that are of the max size (so a trainer name that is 7 bytes, 14 bytes encoded) is terminated with 1 0xFF
+    # Otherwise, they are double terminated.
     if size == 0:
         return [0xFF] + [0x00 for _ in range(size)]
     else:
@@ -314,11 +338,15 @@ def write_to_offset(data, offset, value):
     :param value: The bytearray/bytestring to write to the offset
     :return: The modified bytearray, with the bytes at the specified offset replaced with the bytes specified by `value`
     """
+    # Checks that the offset is a single value and not a tuple
     if isinstance(offset, int):
+        # If so it just overwrites the single byte
         data[offset] = value
     else:
+        # If offset is a tuple, it loops through each byte in the offset
         count = 0
         for i in range(offset[0], offset[1]):
+            # It writes the byte at the position `count` to the position in the bytearray `i`
             data[i] = value[count]
             count += 1
     return data

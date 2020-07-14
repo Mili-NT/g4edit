@@ -893,6 +893,10 @@ class trainer:
         return "\n".join(party_lines)
 class save:
     def __init__(self, savedata, filepath):
+        """
+        :param savedata: the file object of the sav file
+        :param filepath: the path to the sav file, used for saving changes
+        """
         self.allblocks = bytearray(savedata)
         self.path = filepath
         try:
@@ -901,19 +905,33 @@ class save:
             misc.log(e, 'c', "Error creating trainer object!")
     def validate_crc_checksums(self):
         """
+        The blocks have a 0x14 footer that contains the save number (0x04:0x07), the block size (0x08:0x0B), and most
+        importantly the 2 byte checksum (0x12:0x13) used to validate the block data.
+
+        The checksum is calculated with a CRC-16-CCITT (17 bit) cyclic redundancy check algorithm.
+                        https://en.wikipedia.org/wiki/Cyclic_redundancy_check
+        --------------------------------------------------------------------------------------------------
+        Here is a basic explanation of how CRCs are computed.
         To compute an n-bit binary CRC, line the bits representing the input in a row,
         and position the (n + 1)-bit pattern representing the CRC's divisor (called a "polynomial")
-        underneath the left-hand end of the row.
+        underneath the left-hand end of the row... The polynomial is written in binary as the coefficients
+        --------------------------------------------------------------------------------------------------
+
+        This function takes no input, as the function calculates every blocks checksum and modifies the block in the
+        self.allblocks bytearray using self.update_offset()
         """
         block_offsets = [(0x00000,0x0CF2C), (0x00000 + 0x40000,0x0CF2C + 0x40000),
                          (0x0CF2C,0x1f110), (0x0CF2C + 0x40000,0x1f110 + 0x40000)]
         for block_offset in block_offsets:
             block = self.allblocks[block_offset[0]:block_offset[1]]
+            # The current checksum of the block is gotten by reading the last two bytes. This value may be incorrect.
             current_checksum = df.byte_conversion(block[-0x14:][-2:], 'H')[0]
             high_order, low_order = 0xFF, 0xFF
-            for i in range(0, len(block)-0x14): # checksums are calculated from a whole block without taking the footer
+            # checksums are calculated from a whole block without taking the footer (last 0x14 bytes)
+            for i in range(0, len(block)-0x14):
                 current_byte = block[i] ^ high_order
                 current_byte ^= (current_byte >> 4)
+                # The bitwise AND here is really important, as leaving it out will cause extremely large integer results
                 high_order = (low_order ^ (current_byte >> 3) ^ (current_byte << 4)) & 255
                 low_order = (current_byte ^ (current_byte << 5)) & 255
             correct_checksum = high_order << 8 | low_order
@@ -922,6 +940,14 @@ class save:
                 corrected_block = block[:-2] + df.byte_conversion(correct_checksum, 'H', encode=True)
                 self.update_offset(block_offset, corrected_block)
     def update_offset(self, offset, value):
+        """
+        :param offset: a tuple containing the (start, end) values off the offset
+        :param value: bytearray or byte to write to the offset
+        :return: None, modified in place
+
+        This is really just a way to neatly update the save data without calling the write_to_offset data function in
+        a bunch of places. View write_to_offset in data_functions.py, lines 307-324, for more info.
+        """
         self.allblocks = df.write_to_offset(self.allblocks, offset, value)
     def save(self):
         while True:
