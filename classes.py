@@ -99,16 +99,52 @@ class pokemon:
                 moves[x]['pp'] = (pp[x], moves[x]['pp'][1])
         return moves
     def xp_to_next_lvl(self, specid, level):
+        """
+        This calculates how much XP is needed to get to the next level for the pokemon's experience group using
+        the indexes stored in indexes.py
+
+        :param specid: species ID of the pokemon (stored in self.general_info dict)
+        :param level: The pokemon's level (stored in self.battle dict)
+        :return: integer value representing the needed XP
+        """
+        # If level 100, it cant be leveled up
         if level == 100:
             return 0
+        # placeholder variable to store the name of the experience group the pokemon is in
         rate = ''
+        # Iterates over the names of the experience groups: Erratic, Fast, Medium-Fast, Medium-Slow, Slow and Fluctuating
         for category in indexes.growth_rates.keys():
+            # The values of the growth_rates index is an array containing the names of all pokemon in that XP group
+            # So we get the name via passing the species ID to the pkmn index and check if it is in the XP group
             if df.get_index(indexes.pkmn, specid) in indexes.growth_rates[category]:
+                # Update the placeholder variable to the category name
                 rate = category
+        """
+        This is where it gets a bit messy.
+        
+        The xp_growth index contains each level 0-100 as a key, with a value consisting of an array containing the 
+        minimum amount of XP needed to level up for each category. The group_indexes index maps the group name to the
+        that group's position in the xp_growth array. For example, group_indexes['fast'] is 4, so the 4th element in 
+        the xp_growth array is the fast value.
+        
+        So indexes.xp_growth[level][indexes.group_indexes[rate]] ultimately gives us the minimum needed XP for the group
+        the pokemon belongs to. But we want the XP to the next level, so we find the value for the previous level using
+        the same look-ups, and get the difference.
+        """
         return indexes.xp_growth[level][indexes.group_indexes[rate]] - indexes.xp_growth[level-1][indexes.group_indexes[rate]]
     def xp_min(self, specid, level):
+        """
+        This fetches the minimum XP needed to be the CURRENT LEVEL
+
+        :param specid: species ID of the pokemon (stored in self.general_info dict)
+        :param level: The pokemon's level (stored in self.battle dict)
+        :return: The minimum XP to be that level
+        """
+        # If the level is 1, it doesnt need any
         if level <= 1:
             return 0
+        # This is identical to the self.xp_to_next_lvl() lookup loop.
+        # Iterates over the XP groups, finds which group the pokemon belongs to, assigns the group name to the rate variable
         rate = ''
         for category in indexes.growth_rates.keys():
             if df.get_index(indexes.pkmn, specid) in indexes.growth_rates[category]:
@@ -116,51 +152,90 @@ class pokemon:
         return indexes.xp_growth[level-1][indexes.group_indexes[rate]]
     def set_new_pv(self, gender=None, nature=None, shiny=False):
         """
+        This generates a new 4 byte personality value to account for changes. Any aspect not passed in as a parameter
+        stays the same.
+
+        !! Personality value is alternately referred to as PID or PV !!
+
         :param gender: 0 for male, 1 for female
         :param nature: string of nature to change to, i.e: 'hardy', 'adamant', 'lonely'
-        :param shiny: True to generate a shiny PV, else False
-        :return: New PV matching specifications passed as params
+        :param shiny: True to generate a shiny PID, else False
+        :return: New PID matching specifications passed as params
         """
+        # The gender_ratio is a value that is used to determine gender. Values for each pokemon species are stored in
+        # the gender_ratios index in indexes.py
         gender_ratio = self.general_info['ratio']
+        # Sets nature to passed value, if any value is passed. Otherwise it defaults to the current nature.
         nature = nature if nature else self.pid % 25
+        # Sets gender to passed value, if any value is passed. Otherwise it uses the lambda function below to
+        # determine the gender from the personality value. If the personality value % 256 is less than the gender ratio
+        # the pokemon is female. If it is greater than or equal to the gender ratio, it is male
         gender = gender if gender is not None else (lambda opv: 1 if opv % 256 < gender_ratio else 0)(self.pid)
+        # If the pokemon is not being made shiny, it takes the current shinyness boolean as default
         if shiny is False:
             shiny = self.check_shiny(self.pid)
+        # initiate a loop that we can exit when we get a PID that satisfies all set requirements
         while True:
-            new_pv = random.getrandbits(32) & 0xffffffff
-            if new_pv > 4294967295:
+            # Generate a new random 32 bit integer
+            new_pid = random.getrandbits(32) & 0xffffffff
+            # If the PID is greater than the max allowed, we continue and generate a new one
+            if new_pid > 4294967295:
                 continue
-            if gender_ratio in [0, 254, 255] and new_pv % 256 != gender_ratio:
+            # If the pokemon is always male (0), always female (254), or genderless (255) and the PID's gender value
+            # doesn't equal the respective value, we try again
+            if gender_ratio in [0, 254, 255] and new_pid % 256 != gender_ratio:
                 continue
-            if (lambda pv: 1 if pv % 256 < gender_ratio else 0)(new_pv) != gender:
+            # If the new PID doesn't have the correct gender, continue
+            if (lambda pid: 1 if pid % 256 < gender_ratio else 0)(new_pid) != gender:
                 continue
-            if new_pv % 25 != nature:
+            # If the nature isnt correct, continue
+            if new_pid % 25 != nature:
                 continue
-            if shiny and self.check_shiny(new_pv) is False:
+            # if we're making the pokemon shiny and the new PID isn't shiny, continue
+            if shiny and self.check_shiny(new_pid) is False:
                 continue
             else:
-                ng = 'Female' if (lambda pv: 1 if pv % 256 < gender_ratio else 0)(new_pv) == 1 else 'Male'
-                print(f"Gender: {ng}\nNature: {df.get_index(indexes.natures, new_pv % 25)}\nShiny: {self.check_shiny(new_pv)}")
+                """
+                I noticed a slight margin of error when generating PIDs, this merely gets all attributes for the
+                new PID, displays them, and asks if they're correct
+                """
+                new_gender = 'Female' if (lambda pv: 1 if pv % 256 < gender_ratio else 0)(new_pid) == 1 else 'Male'
+                print(f"Gender: {new_gender}\nNature: {df.get_index(indexes.natures, new_pid % 25)}\nShiny: {self.check_shiny(new_pid)}")
                 cont = input("Does this look correct? [y]/[n]: ")
                 if cont.lower() in ['y', 'yes']:
-                    if ng == 'Genderless':
+                    # Updates the gender byte to match PID
+                    if new_gender == 'Genderless':
                         df.write_to_offset(self.pokemon, 0x40, 4)
-                    elif ng == 'Female':
+                    elif new_gender == 'Female':
                         df.write_to_offset(self.pokemon,0x40, 2)
-                    elif ng == 'Male':
+                    elif new_gender == 'Male':
                         df.write_to_offset(self.pokemon,0x40, 0)
-                    df.write_to_offset(self.pokemon,(0x00, 0x04), df.byte_conversion(new_pv, 'I', encode=True))
-                    self.pid = new_pv
+                    # Writes PID to offset and updates it
+                    df.write_to_offset(self.pokemon,(0x00, 0x04), df.byte_conversion(new_pid, 'I', encode=True))
+                    self.pid = new_pid
                     break
-    def check_shiny(self, pv):
+    def check_shiny(self, pid):
+        """
+        :param pid: personality value
+        :return: True if shiny, False otherwise
+        """
+        # trainer ID
         tid = self.ot_info['tid']
+        # secret ID
         sid = self.ot_info['sid']
-        p1 = int(pv / 65536)
-        p2 = pv % 65536
+        # The first half (2 bytes) of the personality value
+        p1 = int(pid / 65536)
+        # The second half (2 bytes) of the personality value
+        p2 = pid % 65536
+        # An XOR chain is performed to get the shiny value
         isShiny = tid ^ sid ^ p1 ^ p2
+        # If the shiny value is less than 8, it is shiny
         return True if isShiny < 8 else False
     # UPDATE/SAVE
     def update(self):
+        """
+        The update function simply redeclares the three information dictionaries to update them
+        """
         self.general_info = {
             'species_id': df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0],
             'species': df.get_index(indexes.pkmn, df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]),
@@ -190,10 +265,21 @@ class pokemon:
             'spec_defense': df.byte_conversion(self.pokemon[0x9A:0x9B], 'B')[0]
         }
     def save(self):
+        """
+        save encodes and shuffles the pokemon bytearray and returns it
+
+        :return: Encoded and shuffled pokemon bytearray
+        """
         enc = df.pokemon_conversion(self.pokemon, encode=True)[0]
         return enc
     # DISPLAYS
     def display(self, item):
+        """
+        display formats the dictionaries and returns them as a string for printing
+
+        :param item: Which dict to print
+        :return: Formatted display string
+        """
         if item == 'general':
             lines = [
                 misc.get_padded(f"General Info for Slot {self.slotnumber}"),
@@ -234,6 +320,9 @@ class pokemon:
             return '\n'.join(lines), lines
         return '\n'.join(lines)
     def display_pkmn(self):
+        """
+        The initial display shown upon selecting the pokemon from the party editor screen
+        """
         misc.clear()
         print(misc.get_padded(f"Slot Number {self.slotnumber}"))
         print(f"PV: {self.pid}")
@@ -252,11 +341,11 @@ class pokemon:
                   "['back' to return to previous menu.]")
             editchoice = input("Edit which: ")
             if editchoice.lower() in ['g', 'gen', 'general', 'general info', '1']:
-                self.edit_gen()
+                self.edit_general()
             elif editchoice.lower() in ['ot', 'trainer', 'ot info', 't', 'trainer info', '2']:
                 self.edit_ot()
             elif editchoice.lower() in ['battle', 'b', 'battle info', 'stats', 's', 'stats info', 'battle stats', '3']:
-                self.edit_stats()
+                self.edit_battle()
             elif editchoice.lower() == 'back':
                   break
             else:
@@ -264,7 +353,7 @@ class pokemon:
                 print("Invalid Option.")
             continue
     # EDIT SUBMENUS
-    def edit_gen(self):
+    def edit_general(self):
         while True:
             self.update()
             misc.clear()
@@ -454,7 +543,7 @@ class pokemon:
                         continue
             else:
                 break
-    def edit_stats(self):
+    def edit_battle(self):
         # SUBMENU SUBMENUS (have I gone too deep here?)
         def battle_info_subeditor():
             while True:

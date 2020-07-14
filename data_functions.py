@@ -303,8 +303,9 @@ def generate_pad(offset_size, value_size):
     so the function would return this:
     [0xFF 0xFF 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00]
     """
-    # We get the number of 0x00s we need by doing multiplying the difference between the offset siz end value size by 2
+    # We get the number of 0x00s we need by multiplying the difference between the offset size end value size by 2
     # We multiply by 2 to account for the two byte character encoding scheme
+    # For example, [0x61 0x61 0x61] (3 bytes) is really [0x61 0x01 0x61 0x01 0x61 0x01] (6 bytes) when encoded
     size = offset_size-value_size*2
     size = size-1 if size == 1 else size
     # Strings that are of the max size (so a trainer name that is 7 bytes, 14 bytes encoded) is terminated with 1 0xFF
