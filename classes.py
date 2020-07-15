@@ -379,7 +379,17 @@ class pokemon:
                 break
             elif element in ['1', 'species']:
                 while True:
+                    print("Note: For Nidoran variants, do Nidoran-f or Nidoran-m respectively.")
                     new_species = input("Enter the name of the new species: ").title()
+                    # Special cases
+                    if new_species == "Nidoran-M":
+                        new_species = "Nidoran♂"
+                    elif new_species == "Nidoran-F":
+                        new_species = "Nidoran♀"
+                    elif new_species == "Mr Mime":
+                        new_species = "Mr. Mime"
+                    elif new_species == "Mime Jr":
+                        new_species = "Mime Jr."
                     if df.is_valid(indexes.pkmn, new_species, is_val=True):
                         spec_id = df.get_index(indexes.pkmn, new_species, from_val=True)
                         spec_id_to_bytes = df.byte_conversion(spec_id, 'H', encode=True)
@@ -580,8 +590,21 @@ class pokemon:
                 elif battle_input.lower() in ['2', 'ability', 'a']:
                     while True:
                         try:
-                            # 46 for pressure,  105 for super luck
-                            new_ability = input("Enter the name of the ability: ")
+
+                            species_name = df.get_index(indexes.pkmn, self.general_info['species_id'])
+                            ability_entry = df.get_index(indexes.valid_abilities, species_name)
+                            print(f"Available abilities: {', '.join(ability_entry['abilities'])}")
+                            print(f"Hidden ability: {ability_entry['hidden']}")
+                            while True:
+                                new_ability = input("Enter the name of the ability (or HA for hidden ability): ")
+                                if new_ability.lower() == 'ha' and ability_entry['hidden'] != 'None':
+                                    new_ability = ability_entry['hidden']
+                                    break
+                                elif new_ability.lower() in [a.lower() for a in ability_entry['abilities']]:
+                                    break
+                                else:
+                                    print("Invalid selection.")
+                                    continue
                             new_ability_id = 0
                             for x in indexes.abilities.values():
                                 if x[0].lower() == new_ability.lower():

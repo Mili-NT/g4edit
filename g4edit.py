@@ -7,12 +7,11 @@ import classes
 """
 Bugs
 """
-
+# TODO: Pokedex number listed as ???
 """
 TODO list
 """
 # High Priority:
-# TODO: Ability (PID and determine valid)
 # TODO: FINISH STATS SUBEDITOR
 # TODO: PP Up implementation
 # TODO: Create new pokemon from empty
