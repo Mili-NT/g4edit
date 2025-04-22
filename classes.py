@@ -1,3 +1,4 @@
+import logging
 from time import sleep
 import misc
 import indexes
@@ -270,7 +271,9 @@ class pokemon:
 
         :return: Encoded and shuffled pokemon bytearray
         """
+        logging.debug(f" Decoded pkmn: {df.bytearr_to_hexstring(self.pokemon.decrypted)}")
         enc = df.pokemon_conversion(self.pokemon, encode=True)[0]
+        logging.debug(f" Encoded pkmn: {df.bytearr_to_hexstring(enc)}")
         return enc
     # DISPLAYS
     def display(self, item):
@@ -796,7 +799,8 @@ class party:
 class trainer:
     def __init__(self, datablock, saveobj):
         self.saveobj = saveobj
-        self.whole = datablock
+        self.offset = saveobj.get_active_block_offset()
+        self.whole = datablock[self.offset:self.offset + 0x0CF2C]
         self.offsets = {
             "trainer_name": (0x68,0x77),
             "trainer_gender": 0x80,
@@ -845,7 +849,7 @@ class trainer:
                         new_amt = int(input("New money amount: "))
                         if 0 <= new_amt <= 999999:
                             encoded = df.byte_conversion(new_amt, '<I', encode=True)[:-1]
-                            self.saveobj.update_offset(self.offsets['money'], bytearray(encoded))
+                            self.update_trainer_offset(self.offsets['money'], bytearray(encoded))
                             break
                         else:
                             raise ValueError
@@ -860,7 +864,7 @@ class trainer:
                         encoded = df.char_conversion(data=new_name,
                                                      encode=True,
                                                      pad=df.generate_pad(15, len(new_name)))
-                        self.saveobj.update_offset(self.offsets['trainer_name'], bytearray(encoded))
+                        self.update_trainer_offset(self.offsets['trainer_name'], bytearray(encoded))
                         break
                     except Exception as e:
                         misc.log(e, 'e')
@@ -870,9 +874,9 @@ class trainer:
                 while True:
                     new_gender = input("New gender (Male/Female): ")
                     if new_gender.lower() in ['m', 'male']:
-                        self.saveobj.update_offset(self.offsets['trainer_gender'], 0)
+                        self.update_trainer_offset(self.offsets['trainer_gender'], 0)
                     elif new_gender.lower() in ['f', 'female']:
-                        self.saveobj.update_offset(self.offsets['trainer_gender'], 1)
+                        self.update_trainer_offset(self.offsets['trainer_gender'], 1)
                     else:
                         print("Enter M, Male, F, or Female.")
                         continue
@@ -884,9 +888,9 @@ class trainer:
                         if 0 < new_id <= 99999:
                             encoded = df.byte_conversion(new_id, '<H', encode=True)
                             if element == 'trainer_id':
-                                self.saveobj.update_offset(self.offsets['trainer_id'], bytearray(encoded))
+                                self.update_trainer_offset(self.offsets['trainer_id'], bytearray(encoded))
                             else:
-                                self.saveobj.update_offset(self.offsets['secret_id'], bytearray(encoded))
+                                self.update_trainer_offset(self.offsets['secret_id'], bytearray(encoded))
                             break
                         else:
                             raise ValueError
@@ -906,7 +910,7 @@ class trainer:
                         else:
                             selected = [int(x) for x in selected.split(',')]
                             badge_value = sum([list(indexes.badge_dict.keys())[x] for x in selected])
-                        self.saveobj.update_offset(self.offsets['badges'], badge_value)
+                        self.update_trainer_offset(self.offsets['badges'], badge_value)
                         break
                     except Exception:
                         print("Enter valid indexes.")
@@ -915,22 +919,56 @@ class trainer:
                 break
             else:
                 continue
+
+    def update_trainer_offset(self, relative_offset, value):
+        """
+        Wrapper for saveobj.update_offset that automatically offsets relative to the active save block.
+
+        :param relative_offset: either a single int or a (start, end) tuple
+        :param value: data to write (byte or bytearray)
+        """
+        if isinstance(relative_offset, tuple):
+            absolute = (self.offset + relative_offset[0], self.offset + relative_offset[1])
+        else:
+            absolute = self.offset + relative_offset
+        self.saveobj.update_offset(absolute, value)
+
     # READ FUNCTIONS
     def get_badge_info(self):
         value = self.whole[0x82]
-        badge_counts = {y:x+1 for x, y in enumerate([sum(list(indexes.badge_dict.keys())[:-x]) if x != 0 else sum(list(indexes.badge_dict.keys())) for x in reversed(range(8))])}
-        if value in indexes.badge_dict.keys():
+
+        # Handle 0 badges explicitly
+        if value == 0:
+            return []
+
+        badge_keys = list(indexes.badge_dict.keys())
+        badge_values = list(indexes.badge_dict.values())
+
+        # Mapping from sum-of-values to badge count
+        badge_counts = {sum(badge_keys[-i:]): i for i in range(1, 9)}
+
+        if value in indexes.badge_dict:
             badgelist = [f"{indexes.badge_dict[value]} Badge"]
-        elif value in badge_counts.keys():
-            badgelist = [f"{list(indexes.badge_dict.values())[x]} Badge" for x in range(badge_counts[value])]
+        elif value in badge_counts:
+            count = badge_counts[value]
+            badgelist = [f"{badge_values[i]} Badge" for i in range(count)]
         else:
-            combos = list(itertools.chain.from_iterable(itertools.combinations(list(indexes.badge_dict.keys()), r) for r in range(len(list(indexes.badge_dict.keys()))+1)))[1:]
-            combolist = {sum(list(sublist)):list(sublist) for sublist in combos}
-            badgelist = [f"{indexes.badge_dict[x]} Badge" for x in combolist[value]]
-        if system().lower() == "windows":
-            return badgelist
-        else:
+            # Handle mixed combinations
+            combos = itertools.chain.from_iterable(
+                itertools.combinations(badge_keys, r)
+                for r in range(1, len(badge_keys) + 1)
+            )
+            for combo in combos:
+                if sum(combo) == value:
+                    badgelist = [f"{indexes.badge_dict[k]} Badge" for k in combo]
+                    break
+            else:
+                badgelist = [f"Unknown badge combo (0x{value:02X})"]
+
+        # Color formatting if not on Windows
+        if system().lower() != "windows":
             return [f"{indexes.badge_to_color[x]}{x}\033[1;m" for x in badgelist]
+        return badgelist
     def get_trainer_info(self):
         # General
         trainer_name = df.char_conversion(df.read_from_offset(self.whole, self.offsets["trainer_name"]))
@@ -1061,6 +1099,51 @@ class save:
         a bunch of places. View write_to_offset in data_functions.py, lines 307-324, for more info.
         """
         self.allblocks = df.write_to_offset(self.allblocks, offset, value)
+
+    def get_active_block_offset(self):
+        """
+        Returns the starting offset of the active save block (0x00000 or 0x40000).
+        """
+
+        def get_counter(block):
+            return int.from_bytes(block[-0x10:-0x0C], 'little')
+
+        def get_crc(block):
+            return int.from_bytes(block[-2:], 'little')
+
+        def compute_crc(block):
+            high_order, low_order = 0xFF, 0xFF
+            for i in range(0, len(block) - 0x14):
+                current_byte = block[i] ^ high_order
+                current_byte ^= (current_byte >> 4)
+                high_order = (low_order ^ (current_byte >> 3) ^ (current_byte << 4)) & 255
+                low_order = (current_byte ^ (current_byte << 5)) & 255
+            return (high_order << 8) | low_order
+
+        block_a = self.allblocks[0x00000:0x0CF2C]
+        block_b = self.allblocks[0x40000:0x0CF2C + 0x40000]
+
+        counter_a = get_counter(block_a)
+        counter_b = get_counter(block_b)
+        valid_a = get_crc(block_a) == compute_crc(block_a)
+        valid_b = get_crc(block_b) == compute_crc(block_b)
+
+        if valid_a and (not valid_b or counter_a >= counter_b):
+            return 0x00000
+        elif valid_b:
+            return 0x40000
+        else:
+            raise ValueError("No valid save blocks found")
+
+    def bump_save_counter(self, offset):
+        """
+        Increments the save counter at offset+0x0CF1C
+        """
+        pos = offset + 0x0CF1C
+        old = int.from_bytes(self.allblocks[pos:pos + 4], 'little')
+        new = (old + 1) & 0xFFFFFFFF
+        self.allblocks[pos:pos + 4] = new.to_bytes(4, 'little')
+
     def save(self):
         while True:
             try:
@@ -1072,6 +1155,7 @@ class save:
                 misc.log("Invalid save option entered.", 'i')
                 print("Enter either 1 or 2.")
                 continue
+        self.bump_save_counter(self.get_active_block_offset())
         self.validate_crc_checksums()
         if savecheck == 1:
             with open(self.path, 'wb') as f:
