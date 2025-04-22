@@ -271,7 +271,7 @@ class pokemon:
 
         :return: Encoded and shuffled pokemon bytearray
         """
-        logging.debug(f" Decoded pkmn: {df.bytearr_to_hexstring(self.pokemon.decrypted)}")
+        logging.debug(f" Decoded pkmn: {df.bytearr_to_hexstring(self.pokemon)}")
         enc = df.pokemon_conversion(self.pokemon, encode=True)[0]
         logging.debug(f" Encoded pkmn: {df.bytearr_to_hexstring(enc)}")
         return enc
@@ -795,7 +795,7 @@ class party:
                 misc.log(e, 'e')
                 sleep(0.5)
                 print("Invalid Index/Command.")
-                continue
+                break
 class trainer:
     def __init__(self, datablock, saveobj):
         self.saveobj = saveobj
