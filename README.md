@@ -1,6 +1,5 @@
 # g4edit
 ## Update:
----
 Updating this on May 8th, 2026. 
 
 I revisited this project for a reverse engineering project for college. The code is horribly
@@ -15,7 +14,7 @@ with just Save and main.py, so i'll leave this one in a semi-working state.
 
 If you're doing a similar project and stumbled on this on github, read through char_conversion(), pokemon_conversion(),
 generate_checksum(), rand(), xor(), crypt(). Other than that, make your life easier and check out the resources below.
----
+
 ## Usage:
 G4Edit is a CLI save editor for pokemon generation 4 games (Diamond, Pearl, Platinum).
 
