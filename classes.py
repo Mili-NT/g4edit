@@ -1,13 +1,15 @@
-import logging
-from time import sleep
-import misc
-import indexes
 import itertools
+import logging
 import random
 from platform import system
-import data_functions as df
+from time import sleep
 
-class interface:
+import data_functions as df
+import indexes
+import misc
+
+
+class Interface:
     def __init__(self, saveobj):
         self.save = saveobj
         self.header = misc.get_title()
@@ -15,6 +17,7 @@ class interface:
         print(f"{self.save.player.display_trainer_info()}\n"
               f"{self.save.player.display_party_info()}")
         self.command()
+
     def command(self):
         while True:
             print(misc.get_padded("Command Input"))
@@ -31,21 +34,24 @@ class interface:
                 except Exception as e:
                     misc.log(e, 'e')
             elif cmd in ['3', 'save']:
-                self.save.save()
+                self.save.write_to_file()
                 self.refresh()
             elif cmd in ['4', 'exit']:
                 print("Warning! Unsaved modifications will disappear!")
                 if input("Save? [y/n]: ").lower() in ['y', 'yes']:
-                    self.save.save()
+                    self.save.write_to_file()
                 exit()
             else:
                 continue
             self.refresh()
+
     def refresh(self):
         misc.clear()
         print(self.header)
         print(f"{self.save.player.display_trainer_info()}\n{self.save.player.display_party_info()}")
-class pokemon:
+
+
+class Pokemon:
     def __init__(self, data_block, trainer_info, slotnumber=0):
         self.trainer_info = trainer_info
         self.whole = data_block
@@ -59,7 +65,7 @@ class pokemon:
             'species_id': df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0],
             'species': df.get_index(indexes.pkmn, df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]),
             'name': df.char_conversion(self.pokemon[0x48:0x5D]),
-            'gender':'Genderless' if self.pokemon[0x40] == 4 else ('Male' if self.pokemon[0x40] == 0 else 'Female'),
+            'gender': 'Genderless' if self.pokemon[0x40] == 4 else ('Male' if self.pokemon[0x40] == 0 else 'Female'),
             'ratio': df.get_index(indexes.gender_ratios, df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0]),
             'nature': df.get_index(indexes.natures, self.pid % 25),
             'item': df.get_index(indexes.items, df.byte_conversion(self.pokemon[0x0A:0x0C], 'H')[0]),
@@ -70,15 +76,15 @@ class pokemon:
         # Trainer info
         self.ot_info = {'tid': df.byte_conversion(self.pokemon[0x0C:0x0E], 'H')[0],
                         'sid': df.byte_conversion(self.pokemon[0x0E:0x10], 'H')[0],
-                        'ot_name':df.char_conversion(self.pokemon[0x68:0x77])}
+                        'ot_name': df.char_conversion(self.pokemon[0x68:0x77])}
         # Battle related stats
         self.battle = {
-            'level':self.pokemon[0x8C],
+            'level': self.pokemon[0x8C],
             'xp': df.byte_conversion(bytearray(self.pokemon[0x10:0x13] + b'\x00'), 'I')[0],
-            'ability':df.get_index(indexes.abilities, self.pokemon[0x15]),
+            'ability': df.get_index(indexes.abilities, self.pokemon[0x15]),
             'moveset': self.format_moves(),
-            'current_hp':df.byte_conversion(self.pokemon[0x8E:0x8F], 'B')[0],
-            'max_hp':df.byte_conversion(self.pokemon[0x90:0x91], 'B')[0],
+            'current_hp': df.byte_conversion(self.pokemon[0x8E:0x8F], 'B')[0],
+            'max_hp': df.byte_conversion(self.pokemon[0x90:0x91], 'B')[0],
             'attack': df.byte_conversion(self.pokemon[0x92:0x94], 'H')[0],
             'defense': df.byte_conversion(self.pokemon[0x94:0x95], 'B')[0],
             'speed': df.byte_conversion(self.pokemon[0x96:0x97], 'B')[0],
@@ -88,10 +94,12 @@ class pokemon:
         # If the slot is empty, set pokemon name to empty to prevent it returning ???????
         if df.byte_conversion(self.pokemon[0x08:0x0A], 'H')[0] == 0:
             self.general_info['name'] = 'Empty'
+
     # GENERAL METHODS
     def format_moves(self):
         tupled = [tuple(x) for x in df.list_to_chunks([x for x in self.pokemon[0x28:0x30]], 2)]
-        moves = [df.get_index(indexes.moves, x[0]+256) if x[1] == 1 else df.get_index(indexes.moves, x[0]) for x in tupled]
+        moves = [df.get_index(indexes.moves, x[0] + 256) if x[1] == 1 else df.get_index(indexes.moves, x[0]) for x in
+                 tupled]
         pp = [x for x in self.pokemon[0x30:0x34]]
         for x in range(len(pp)):
             if isinstance(moves[x]['pp'], tuple) is False:
@@ -99,6 +107,7 @@ class pokemon:
             else:
                 moves[x]['pp'] = (pp[x], moves[x]['pp'][1])
         return moves
+
     def xp_to_next_lvl(self, specid, level):
         """
         This calculates how much XP is needed to get to the next level for the pokemon's experience group using
@@ -132,7 +141,9 @@ class pokemon:
         the pokemon belongs to. But we want the XP to the next level, so we find the value for the previous level using
         the same look-ups, and get the difference.
         """
-        return indexes.xp_growth[level][indexes.group_indexes[rate]] - indexes.xp_growth[level-1][indexes.group_indexes[rate]]
+        return indexes.xp_growth[level][indexes.group_indexes[rate]] - indexes.xp_growth[level - 1][
+            indexes.group_indexes[rate]]
+
     def xp_min(self, specid, level):
         """
         This fetches the minimum XP needed to be the CURRENT LEVEL
@@ -150,7 +161,8 @@ class pokemon:
         for category in indexes.growth_rates.keys():
             if df.get_index(indexes.pkmn, specid) in indexes.growth_rates[category]:
                 rate = category
-        return indexes.xp_growth[level-1][indexes.group_indexes[rate]]
+        return indexes.xp_growth[level - 1][indexes.group_indexes[rate]]
+
     def set_new_pv(self, gender=None, nature=None, shiny=False):
         """
         This generates a new 4 byte personality value to account for changes. Any aspect not passed in as a parameter
@@ -201,20 +213,22 @@ class pokemon:
                 new PID, displays them, and asks if they're correct
                 """
                 new_gender = 'Female' if (lambda pv: 1 if pv % 256 < gender_ratio else 0)(new_pid) == 1 else 'Male'
-                print(f"Gender: {new_gender}\nNature: {df.get_index(indexes.natures, new_pid % 25)}\nShiny: {self.check_shiny(new_pid)}")
+                print(
+                    f"Gender: {new_gender}\nNature: {df.get_index(indexes.natures, new_pid % 25)}\nShiny: {self.check_shiny(new_pid)}")
                 cont = input("Does this look correct? [y]/[n]: ")
                 if cont.lower() in ['y', 'yes']:
                     # Updates the gender byte to match PID
                     if new_gender == 'Genderless':
                         df.write_to_offset(self.pokemon, 0x40, 4)
                     elif new_gender == 'Female':
-                        df.write_to_offset(self.pokemon,0x40, 2)
+                        df.write_to_offset(self.pokemon, 0x40, 2)
                     elif new_gender == 'Male':
-                        df.write_to_offset(self.pokemon,0x40, 0)
+                        df.write_to_offset(self.pokemon, 0x40, 0)
                     # Writes PID to offset and updates it
-                    df.write_to_offset(self.pokemon,(0x00, 0x04), df.byte_conversion(new_pid, 'I', encode=True))
+                    df.write_to_offset(self.pokemon, (0x00, 0x04), df.byte_conversion(new_pid, 'I', encode=True))
                     self.pid = new_pid
                     break
+
     def check_shiny(self, pid):
         """
         :param pid: personality value
@@ -232,6 +246,7 @@ class pokemon:
         isShiny = tid ^ sid ^ p1 ^ p2
         # If the shiny value is less than 8, it is shiny
         return True if isShiny < 8 else False
+
     # UPDATE/SAVE
     def update(self):
         """
@@ -265,6 +280,7 @@ class pokemon:
             'spec_attack': df.byte_conversion(self.pokemon[0x98:0x99], 'B')[0],
             'spec_defense': df.byte_conversion(self.pokemon[0x9A:0x9B], 'B')[0]
         }
+
     def save(self):
         """
         save encodes and shuffles the pokemon bytearray and returns it
@@ -272,9 +288,10 @@ class pokemon:
         :return: Encoded and shuffled pokemon bytearray
         """
         logging.debug(f" Decoded pkmn: {df.bytearr_to_hexstring(self.pokemon)}")
-        enc = df.pokemon_conversion(self.pokemon, encode=True)[0]
+        enc, _, _ = df.pokemon_conversion(self.pokemon, encode=True)
         logging.debug(f" Encoded pkmn: {df.bytearr_to_hexstring(enc)}")
         return enc
+
     # DISPLAYS
     def display(self, item):
         """
@@ -318,10 +335,11 @@ class pokemon:
                 f"Special Defense: {self.battle['spec_defense']}",
                 misc.get_padded("Moves")
             ]
-            for index,item in enumerate(self.battle['moveset']):
-                lines.append(f"[{index+1}]: {item['name']} ({item['pp'][0]}pp/{item['pp'][1]}pp)")
+            for index, item in enumerate(self.battle['moveset']):
+                lines.append(f"[{index + 1}]: {item['name']} ({item['pp'][0]}pp/{item['pp'][1]}pp)")
             return '\n'.join(lines), lines
         return '\n'.join(lines)
+
     def display_pkmn(self):
         """
         The initial display shown upon selecting the pokemon from the party editor screen
@@ -332,6 +350,7 @@ class pokemon:
         print(self.display('general'))
         print(self.display('ot'))
         print(self.display('stats')[0])
+
     # EDITS
     def edit(self):
         while True:
@@ -350,11 +369,12 @@ class pokemon:
             elif editchoice.lower() in ['battle', 'b', 'battle info', 'stats', 's', 'stats info', 'battle stats', '3']:
                 self.edit_battle()
             elif editchoice.lower() == 'back':
-                  break
+                break
             else:
                 sleep(0.5)
                 print("Invalid Option.")
             continue
+
     # EDIT SUBMENUS
     def edit_general(self):
         while True:
@@ -363,13 +383,13 @@ class pokemon:
             print(misc.get_padded(f"General Info for Slot {self.slotnumber}"))
             self.display('general')
             opts = {
-                '1':'species',
-                '2':'name',
-                '3':'gender',
-                '4':'nature',
-                '5':'item',
-                '6':'pokeball',
-                '7':'pokerus',
+                '1': 'species',
+                '2': 'name',
+                '3': 'gender',
+                '4': 'nature',
+                '5': 'item',
+                '6': 'pokeball',
+                '7': 'pokerus',
                 '8': 'location',
                 '9': 'shinyness'
             }
@@ -397,7 +417,7 @@ class pokemon:
                         spec_id = df.get_index(indexes.pkmn, new_species, from_val=True)
                         spec_id_to_bytes = df.byte_conversion(spec_id, 'H', encode=True)
                         misc.log(f"New SPECID: {spec_id}. Writing {spec_id_to_bytes} to 0x08:0x0A")
-                        df.write_to_offset(self.pokemon, (0x08,0x0A), spec_id_to_bytes)
+                        df.write_to_offset(self.pokemon, (0x08, 0x0A), spec_id_to_bytes)
                         break
                     else:
                         print("No such pokemon found. Only pokemon from Gen I -> Gen IV are valid.")
@@ -408,7 +428,8 @@ class pokemon:
                     if len(f"{new_name}") == 10:
                         encoded = df.char_conversion(new_name, encode=True, pad=[255])
                     elif 0 < len(f"{new_name}") < 10:
-                        encoded = df.char_conversion(data=new_name, encode=True, pad=[255, 255] + [0 for _ in range((21 - len(new_name * 2)) - 2)])
+                        encoded = df.char_conversion(data=new_name, encode=True,
+                                                     pad=[255, 255] + [0 for _ in range((21 - len(new_name * 2)) - 2)])
                     else:
                         print("Name must be greater than 0 and no more than 10 characters.")
                         continue
@@ -446,7 +467,8 @@ class pokemon:
                         break
                     else:
                         print("No such item found.")
-                        print("Check https://bulbapedia.bulbagarden.net/wiki/List_of_items_by_index_number_(Generation_IV)")
+                        print(
+                            "Check https://bulbapedia.bulbagarden.net/wiki/List_of_items_by_index_number_(Generation_IV)")
                         continue
             elif element in ['6', 'pokeball']:
                 while True:
@@ -482,7 +504,7 @@ class pokemon:
                         print("Invalid location name.")
                         continue
                     encoded = df.byte_conversion(new_loc_id, 'H', encode=True)
-                    df.write_to_offset(self.pokemon, (0x46,0x48), encoded)
+                    df.write_to_offset(self.pokemon, (0x46, 0x48), encoded)
                     break
             elif element in ['9', 'shinyness']:
                 while True:
@@ -495,6 +517,7 @@ class pokemon:
                         print("Invalid option.")
                         continue
                     break
+
     def edit_ot(self):
         while True:
             self.update()
@@ -523,15 +546,16 @@ class pokemon:
                             if 0 < new_id <= 65535:
                                 encoded = df.byte_conversion(new_id, 'H', encode=True)
                                 if id_type == 'trainer':
-                                    df.write_to_offset(self.pokemon, (0x0C,0x0E), encoded)
+                                    df.write_to_offset(self.pokemon, (0x0C, 0x0E), encoded)
                                 else:
-                                    df.write_to_offset(self.pokemon, (0x0E,0x10), encoded)
+                                    df.write_to_offset(self.pokemon, (0x0E, 0x10), encoded)
                                 break
                             else:
                                 raise ValueError
                     except Exception as e:
                         misc.log(e, 'error')
-                        print(f"New {'trainer' if element == '1' else 'secret'} ID must be greater than 0 and less than 65535.")
+                        print(
+                            f"New {'trainer' if element == '1' else 'secret'} ID must be greater than 0 and less than 65535.")
                         continue
             elif element == '3':
                 while True:
@@ -548,7 +572,7 @@ class pokemon:
                             if len(new_name) < 0 or len(new_name) > 7:
                                 raise ValueError
                             encoded = df.char_conversion(new_name, encode=True, pad=df.generate_pad(15, len(new_name)))
-                            df.write_to_offset(self.pokemon, (0x68,0x77), encoded)
+                            df.write_to_offset(self.pokemon, (0x68, 0x77), encoded)
                         break
                     except Exception as e:
                         misc.log(e, 'e')
@@ -556,6 +580,7 @@ class pokemon:
                         continue
             else:
                 break
+
     def edit_battle(self):
         # SUBMENU SUBMENUS (have I gone too deep here?)
         def battle_info_subeditor():
@@ -584,7 +609,7 @@ class pokemon:
                             df.write_to_offset(self.pokemon, 0x8C, new_lvl)
                             new_xp = self.xp_min(self.general_info['species_id'], new_lvl)
                             to_bytes = df.byte_conversion(new_xp, 'I', encode=True)
-                            df.write_to_offset(self.pokemon, (0x10,0x13), to_bytes)
+                            df.write_to_offset(self.pokemon, (0x10, 0x13), to_bytes)
                             break
                         except Exception as e:
                             misc.log(e, 'e')
@@ -627,13 +652,14 @@ class pokemon:
                             new_hp = int(input(f"Enter new HP value (less than {self.battle['max_hp']}): "))
                             if new_hp < 0 or new_hp > self.battle['max_hp']:
                                 raise ValueError
-                            df.write_to_offset(self.pokemon, (0x8E,0x8F), df.byte_conversion(new_hp, 'B', encode=True))
+                            df.write_to_offset(self.pokemon, (0x8E, 0x8F), df.byte_conversion(new_hp, 'B', encode=True))
                             break
                         except Exception as e:
                             misc.log(e, 'e')
                             print(f"Value must be greater or equal to than 0 and less than {self.battle['max_hp']}")
                             continue
                 continue
+
         def stats_subeditor():
             while True:
                 self.update()
@@ -641,12 +667,12 @@ class pokemon:
                 print('\n'.join(self.display('stats')[1][5:12]))
                 print(misc.get_padded("Edit"))
                 stats_opts = {
-                    '1':'Max HP',
-                    '2':'Attack',
-                    '3':'Defense',
-                    '4':'Speed',
-                    '5':'Special Attack',
-                    '6':'Special Defense'
+                    '1': 'Max HP',
+                    '2': 'Attack',
+                    '3': 'Defense',
+                    '4': 'Speed',
+                    '5': 'Special Attack',
+                    '6': 'Special Defense'
                 }
                 for i in stats_opts:
                     print(f"[{i}]: {stats_opts[i]}")
@@ -667,6 +693,7 @@ class pokemon:
                 elif stats_input.lower() in ['6', 'special defense', 'sp def']:
                     pass
                 continue
+
         def moves_subeditor():
             while True:
                 self.update()
@@ -694,7 +721,8 @@ class pokemon:
                         print(f"Name: {move['name']}")
                         print(f"Category: {move['category']}")
                         print(f"Type: {move['type']}")
-                        print(f"{move['pp'][0]}pp/{move['pp'][1]}pp ({move['power']} power with {move['accuracy']} accuracy)")
+                        print(
+                            f"{move['pp'][0]}pp/{move['pp'][1]}pp ({move['power']} power with {move['accuracy']} accuracy)")
                         print(misc.get_padded("Edit"))
                         print(f"[1]: Change Move\n[2]: Change PP")
                         move_edit = input("Edit which: ")
@@ -711,11 +739,11 @@ class pokemon:
                                     break
                                 print("Invalid move entered.")
                                 continue
-                            wrapped_id = (new_move_id-256, 1) if new_move_id >= 256 else (new_move_id, 0)
+                            wrapped_id = (new_move_id - 256, 1) if new_move_id >= 256 else (new_move_id, 0)
                             movelist = [x for x in self.pokemon[0x28:0x2F]]
-                            movelist[position*2] = wrapped_id[0]
-                            movelist[(position*2)+1] = wrapped_id[1]
-                            df.write_to_offset(self.pokemon, (0x28,0x2F), bytearray(movelist))
+                            movelist[position * 2] = wrapped_id[0]
+                            movelist[(position * 2) + 1] = wrapped_id[1]
+                            df.write_to_offset(self.pokemon, (0x28, 0x2F), bytearray(movelist))
                         elif move_edit == '2':
                             print(f"Current PP: {move['pp'][0]} out of maximum {move['pp'][1]}")
                             while True:
@@ -735,6 +763,7 @@ class pokemon:
                         else:
                             continue
                         break
+
         while True:
             self.update()
             misc.clear()
@@ -757,52 +786,89 @@ class pokemon:
                 moves_subeditor()
             elif edit_choice.lower() == 'back':
                 break
-class party:
-    def __init__(self, party_block, saveobj, trainer_info):
+
+
+class Party:
+    def __init__(self, saveobj, trainer_info):
         self.saveobj = saveobj
         self.trainer_info = trainer_info
-        self.whole = party_block
+        self.offset = saveobj.get_active_block_offset()
+        self.whole = saveobj.allblocks[self.offset + 0xA0: self.offset + 0x628]
         self.in_party = self.whole[0x9C]
         self.contents = self.load_party()
+
     def load_party(self):
-        blocks = [self.whole[0:236], self.whole[236:472], self.whole[472:708],
-                  self.whole[708:944], self.whole[944:1180], self.whole[1180:1416]]
-        return {index+1:pokemon(data, self.trainer_info, index+1) for index,data in enumerate(blocks)}
-    def save_party(self):
-        blocks = [pkmn.save() for pkmn in self.contents.values()]
-        combined = df.combine_bytestrings(blocks)
-        self.whole = combined
-        self.contents = self.load_party()
-        self.saveobj.update_offset((0xA0, 0x628), combined)
+        blocks = [
+            self.whole[0:236],
+            self.whole[236:472],
+            self.whole[472:708],
+            self.whole[708:944],
+            self.whole[944:1180],
+            self.whole[1180:1416]
+        ]
+        return {index + 1: Pokemon(data, self.trainer_info, index + 1) for index, data in enumerate(blocks)}
+
     def edit(self):
         while True:
             misc.clear()
             print(misc.get_padded("Party Edit"))
-            for x in self.contents.keys():
-                print(f"Slot #{x}: {self.contents[x].general_info['name']}")
-            print(f"['back' to return to main menu.]")
+            for slot, pkmn in self.contents.items():
+                name = pkmn.general_info['name']
+                print(f"Slot #{slot}: {name}")
+            print("['back' to return to main menu.]")
+
+            select = input("Enter index to edit (or 'back'): ").strip().lower()
+
+            if select == 'back':
+                return
+
             try:
-                print(misc.get_padded("Command Input"))
-                select = input("Enter index corresponding to pokemon to modify: ")
-                if select.lower() == 'back':
-                    self.save_party()
-                    break
-                else:
-                    self.contents[int(select)].edit()
-                    self.save_party()
-                    continue
+                slot = int(select)
+                if slot not in self.contents:
+                    raise ValueError
+
+                # Edit the selected Pokémon
+                self.contents[slot].edit()
+
+                # After editing, immediately encrypt and reinsert it
+                enc_pkmn = self.contents[slot].save()
+
+                # Calculate offsets
+                active_offset = self.saveobj.get_active_block_offset()
+                backup_offset = 0x40000 if active_offset == 0x00000 else 0x00000
+                party_start = 0xA0
+
+                # Compute per-slot positions
+                pkmn_start = party_start + (slot - 1) * 236
+                pkmn_end = pkmn_start + 236
+
+                # Write to active block
+                self.saveobj.update_offset((active_offset + pkmn_start, active_offset + pkmn_end), enc_pkmn)
+                self.saveobj.validate_crc_checksums()
+                # Write to backup block
+                self.saveobj.update_offset((backup_offset + pkmn_start, backup_offset + pkmn_end), enc_pkmn)
+                self.saveobj.validate_crc_checksums()
+                # Refresh live memory view
+                self.whole = self.saveobj.allblocks[self.offset + 0xA0: self.offset + 0x628]
+                self.contents = self.load_party()
+
+            except ValueError:
+                print("Invalid slot number.")
+                sleep(0.5)
+                continue
             except Exception as e:
                 misc.log(e, 'e')
+                print("An unexpected error occurred.")
                 sleep(0.5)
-                print("Invalid Index/Command.")
-                break
-class trainer:
-    def __init__(self, datablock, saveobj):
+                continue
+
+
+class Trainer:
+    def __init__(self, saveobj):
         self.saveobj = saveobj
         self.offset = saveobj.get_active_block_offset()
-        self.whole = datablock[self.offset:self.offset + 0x0CF2C]
         self.offsets = {
-            "trainer_name": (0x68,0x77),
+            "trainer_name": (0x68, 0x77),
             "trainer_gender": 0x80,
             "trainer_id": (0x78, 0x7a),
             "secret_id": (0x7a, 0x7c),
@@ -810,23 +876,25 @@ class trainer:
             "badges": 0x82,
         }
         self.trainer_info = self.get_trainer_info()
-        self.trainer_party = party(self.whole[0xA0:0x628], self.saveobj, self.trainer_info)
+        self.trainer_party = Party(self.saveobj, self.trainer_info)
+
     # EDIT
     def update(self):
         self.trainer_info = self.get_trainer_info()
-        self.trainer_party = party(self.whole[0xA0:0x628], self.saveobj, self.trainer_info)
+        self.trainer_party = Party(self.saveobj, self.trainer_info)
+
     def edit(self):
         while True:
             self.update()
             misc.clear()
             print(misc.get_padded("Trainer Edit"))
             opts = {
-                '1':"trainer_name",
-                '2':"trainer_gender",
-                '3':"trainer_id",
-                '4':"secret_id",
-                '5':"money",
-                '6':"badges",
+                '1': "trainer_name",
+                '2': "trainer_gender",
+                '3': "trainer_id",
+                '4': "secret_id",
+                '5': "money",
+                '6': "badges",
             }
             for x in opts.keys():
                 print(f"[{x}]: {opts[x]}")
@@ -900,7 +968,7 @@ class trainer:
                         continue
             if element == 'badges':
                 while True:
-                    for x,y in enumerate(list(indexes.badge_dict.values())):
+                    for x, y in enumerate(list(indexes.badge_dict.values())):
                         print(f"[{x}]: {y}")
                     try:
                         selected = input("Enter the index corresponding with the badges you want, "
@@ -921,89 +989,71 @@ class trainer:
                 continue
 
     def update_trainer_offset(self, relative_offset, value):
-        """
-        Wrapper for saveobj.update_offset that automatically offsets relative to the active save block.
-
-        :param relative_offset: either a single int or a (start, end) tuple
-        :param value: data to write (byte or bytearray)
-        """
         if isinstance(relative_offset, tuple):
             absolute = (self.offset + relative_offset[0], self.offset + relative_offset[1])
         else:
             absolute = self.offset + relative_offset
         self.saveobj.update_offset(absolute, value)
+        self.saveobj.validate_crc_checksums()
 
     # READ FUNCTIONS
-    def get_badge_info(self):
-        value = self.whole[0x82]
-
-        # Handle 0 badges explicitly
+    def get_badge_info(self, data):
+        value = data[0x82]
         if value == 0:
             return []
-
         badge_keys = list(indexes.badge_dict.keys())
         badge_values = list(indexes.badge_dict.values())
-
-        # Mapping from sum-of-values to badge count
         badge_counts = {sum(badge_keys[-i:]): i for i in range(1, 9)}
-
         if value in indexes.badge_dict:
             badgelist = [f"{indexes.badge_dict[value]} Badge"]
         elif value in badge_counts:
             count = badge_counts[value]
             badgelist = [f"{badge_values[i]} Badge" for i in range(count)]
         else:
-            # Handle mixed combinations
             combos = itertools.chain.from_iterable(
-                itertools.combinations(badge_keys, r)
-                for r in range(1, len(badge_keys) + 1)
-            )
+                itertools.combinations(badge_keys, r) for r in range(1, len(badge_keys) + 1))
             for combo in combos:
                 if sum(combo) == value:
                     badgelist = [f"{indexes.badge_dict[k]} Badge" for k in combo]
                     break
             else:
                 badgelist = [f"Unknown badge combo (0x{value:02X})"]
-
-        # Color formatting if not on Windows
         if system().lower() != "windows":
             return [f"{indexes.badge_to_color[x]}{x}\033[1;m" for x in badgelist]
         return badgelist
+
     def get_trainer_info(self):
-        # General
-        trainer_name = df.char_conversion(df.read_from_offset(self.whole, self.offsets["trainer_name"]))
-        trainer_gender = "Male" if df.read_from_offset(self.whole, self.offsets['trainer_gender']) == 0 else "Female"
-        trainer_id = int.from_bytes(df.read_from_offset(self.whole, self.offsets['trainer_id']), "little")
-        secret_id = int.from_bytes(df.read_from_offset(self.whole, self.offsets['secret_id']), "little")
-        trainer_badges = self.get_badge_info()
-        money = int.from_bytes(df.read_from_offset(self.whole, self.offsets['money']), "little")
-        # Progress
-        bar = '/'.join(["*" for _ in range(len(self.get_badge_info()))] + ["-" for _ in range(8 - len(self.get_badge_info()))])
+        whole = self.saveobj.allblocks[self.offset:self.offset + 0x0CF2C]
+        trainer_name = df.char_conversion(df.read_from_offset(whole, self.offsets["trainer_name"]))
+        trainer_gender = "Male" if df.read_from_offset(whole, self.offsets['trainer_gender']) == 0 else "Female"
+        trainer_id = int.from_bytes(df.read_from_offset(whole, self.offsets['trainer_id']), "little")
+        secret_id = int.from_bytes(df.read_from_offset(whole, self.offsets['secret_id']), "little")
+        trainer_badges = self.get_badge_info(whole)
+        money = int.from_bytes(df.read_from_offset(whole, self.offsets['money']), "little")
+        bar = '/'.join(["*" for _ in range(len(trainer_badges))] + ["-" for _ in range(8 - len(trainer_badges))])
         gym_progress = (f"[{bar}]", f"{bar.count('*')}/8 Gyms Beaten!")
-        #
-        # party:
-        #
-        trainer_data = {
-            "name":trainer_name,
-            "gender":trainer_gender,
-            "tid":trainer_id,
-            "sid":secret_id,
-            "badges":trainer_badges,
-            "money":money,
-            "gym_progress":gym_progress,
+        return {
+            "name": trainer_name,
+            "gender": trainer_gender,
+            "tid": trainer_id,
+            "sid": secret_id,
+            "badges": trainer_badges,
+            "money": money,
+            "gym_progress": gym_progress,
         }
-        return trainer_data
+
     # DISPLAY FUNCTIONS
     def display_trainer_info(self):
         info_lines = [
-            misc.get_padded(f"Trainer: {misc.cstring(self.trainer_info['name'], color='blu')}/{misc.cstring(self.trainer_info['gender'], color='blu')}"),
+            misc.get_padded(
+                f"Trainer: {misc.cstring(self.trainer_info['name'], color='blu')}/{misc.cstring(self.trainer_info['gender'], color='blu')}"),
             f"Trainer ID:{''.join([' ' for _ in range(14 - len('Trainer ID:'))])}{misc.cstring(self.trainer_info['tid'], color='blu')}",
             f"Secret ID:{''.join([' ' for _ in range(14 - len('Secret ID:'))])}{misc.cstring(self.trainer_info['sid'], color='blu')}",
             f"Money:{''.join([' ' for _ in range(14 - len('Money:'))])}{misc.cstring('$' + str(self.trainer_info['money']), color='blu')}\n",
-            ]
+        ]
         # TODO: Awful, fix this
         badges = []
-        for index,chunk in enumerate(df.list_to_chunks(self.trainer_info['badges'], 2)):
+        for index, chunk in enumerate(df.list_to_chunks(self.trainer_info['badges'], 2)):
             if index == 0:
                 if len(chunk) < 2:
                     row = f"{misc.cstring(self.trainer_info['name'], color='blu')} has: {chunk[0]}"
@@ -1018,7 +1068,7 @@ class trainer:
                     row = f"{chunk[0]}"
                 else:
                     stripped_first_chunk = misc.stripcolor(chunk[0])
-                    row = f"{chunk[0]}{''.join([' ' for x in range(8-(len(f'{stripped_first_chunk}')-10))])}{chunk[1]}"
+                    row = f"{chunk[0]}{''.join([' ' for x in range(8 - (len(f'{stripped_first_chunk}') - 10))])}{chunk[1]}"
                 offset = len(f"{self.trainer_info['name']} has:")
                 badges.append(f"{''.join([' ' for _ in range(offset)])} {row}")
         game_progress = [
@@ -1026,10 +1076,11 @@ class trainer:
             '\n'.join(badges),
             '\n\n',
             f"{misc.cstring(self.trainer_info['gym_progress'][0], color='blu')} => {misc.cstring(self.trainer_info['gym_progress'][1], color='blu')}",
-            ]
+        ]
 
         display = "\n".join(info_lines) + ''.join(game_progress)
         return display
+
     def display_party_info(self):
         party_lines = [
             misc.get_padded('Party')
@@ -1041,126 +1092,89 @@ class trainer:
                 info = f"({self.trainer_party.contents[slot].general_info['gender']} {self.trainer_party.contents[slot].general_info['species']})"
             party_lines.append(f"[{slot}]: {self.trainer_party.contents[slot].general_info['name']} {info}")
         return "\n".join(party_lines)
-class save:
+
+
+class Save:
     def __init__(self, savedata, filepath):
-        """
-        :param savedata: the file object of the sav file
-        :param filepath: the path to the sav file, used for saving changes
-        """
         self.allblocks = bytearray(savedata)
         self.path = filepath
-        try:
-            self.player = trainer(self.allblocks, self)
-        except Exception as e:
-            misc.log(e, 'c', "Error creating trainer object!")
-    def validate_crc_checksums(self):
-        """
-        The blocks have a 0x14 footer that contains the save number (0x04:0x07), the block size (0x08:0x0B), and most
-        importantly the 2 byte checksum (0x12:0x13) used to validate the block data.
+        self.player = Trainer(self)
 
-        The checksum is calculated with a CRC-16-CCITT (17 bit) cyclic redundancy check algorithm.
-                        https://en.wikipedia.org/wiki/Cyclic_redundancy_check
-        --------------------------------------------------------------------------------------------------
-        Here is a basic explanation of how CRCs are computed.
-        To compute an n-bit binary CRC, line the bits representing the input in a row,
-        and position the (n + 1)-bit pattern representing the CRC's divisor (called a "polynomial")
-        underneath the left-hand end of the row... The polynomial is written in binary as the coefficients
-        --------------------------------------------------------------------------------------------------
-
-        This function takes no input, as the function calculates every blocks checksum and modifies the block in the
-        self.allblocks bytearray using self.update_offset()
-        """
-        block_offsets = [(0x00000,0x0CF2C), (0x00000 + 0x40000,0x0CF2C + 0x40000),
-                         (0x0CF2C,0x1f110), (0x0CF2C + 0x40000,0x1f110 + 0x40000)]
-        for block_offset in block_offsets:
-            block = self.allblocks[block_offset[0]:block_offset[1]]
-            # The current checksum of the block is gotten by reading the last two bytes. This value may be incorrect.
-            current_checksum = df.byte_conversion(block[-0x14:][-2:], 'H')[0]
-            high_order, low_order = 0xFF, 0xFF
-            # checksums are calculated from a whole block without taking the footer (last 0x14 bytes)
-            for i in range(0, len(block)-0x14):
-                current_byte = block[i] ^ high_order
-                current_byte ^= (current_byte >> 4)
-                # The bitwise AND here is really important, as leaving it out will cause extremely large integer results
-                high_order = (low_order ^ (current_byte >> 3) ^ (current_byte << 4)) & 255
-                low_order = (current_byte ^ (current_byte << 5)) & 255
-            correct_checksum = high_order << 8 | low_order
-            misc.log(f"{hex(block_offset[0]), hex(block_offset[1])}: {current_checksum} -> {correct_checksum}", 'd')
-            if current_checksum != correct_checksum:
-                corrected_block = block[:-2] + df.byte_conversion(correct_checksum, 'H', encode=True)
-                self.update_offset(block_offset, corrected_block)
     def update_offset(self, offset, value):
-        """
-        :param offset: a tuple containing the (start, end) values off the offset
-        :param value: bytearray or byte to write to the offset
-        :return: None, modified in place
+        if isinstance(offset, tuple):
+            start, end = offset
+            self.allblocks[start:end] = value
+        else:
+            self.allblocks[offset] = value
 
-        This is really just a way to neatly update the save data without calling the write_to_offset data function in
-        a bunch of places. View write_to_offset in data_functions.py, lines 307-324, for more info.
-        """
-        self.allblocks = df.write_to_offset(self.allblocks, offset, value)
+    def verify_checksum(self, offset):
+        block = self.allblocks[offset:offset + 0x0CF2C]
+        stored = int.from_bytes(block[-2:], 'little')
+        computed = self.compute_crc(block)
+        return stored == computed
 
     def get_active_block_offset(self):
-        """
-        Returns the starting offset of the active save block (0x00000 or 0x40000).
-        """
+        def get_info(block):
+            counter = int.from_bytes(block[-0x10:-0x0C], 'little')
+            crc = int.from_bytes(block[-2:], 'little')
+            valid = crc == self.compute_crc(block)
+            return counter, valid
 
-        def get_counter(block):
-            return int.from_bytes(block[-0x10:-0x0C], 'little')
+        misc.log("Verifying save blocks...")
+        misc.log("  Block 0x00000:", self.verify_checksum(0x00000))
+        misc.log("  Block 0x40000:", self.verify_checksum(0x40000))
+        a = self.allblocks[0x00000:0x0CF2C]
+        b = self.allblocks[0x40000:0x40000 + 0x0CF2C]
 
-        def get_crc(block):
-            return int.from_bytes(block[-2:], 'little')
+        count_a, valid_a = get_info(a)
+        count_b, valid_b = get_info(b)
 
-        def compute_crc(block):
-            high_order, low_order = 0xFF, 0xFF
-            for i in range(0, len(block) - 0x14):
-                current_byte = block[i] ^ high_order
-                current_byte ^= (current_byte >> 4)
-                high_order = (low_order ^ (current_byte >> 3) ^ (current_byte << 4)) & 255
-                low_order = (current_byte ^ (current_byte << 5)) & 255
-            return (high_order << 8) | low_order
-
-        block_a = self.allblocks[0x00000:0x0CF2C]
-        block_b = self.allblocks[0x40000:0x0CF2C + 0x40000]
-
-        counter_a = get_counter(block_a)
-        counter_b = get_counter(block_b)
-        valid_a = get_crc(block_a) == compute_crc(block_a)
-        valid_b = get_crc(block_b) == compute_crc(block_b)
-
-        if valid_a and (not valid_b or counter_a >= counter_b):
+        if valid_a and (not valid_b or count_a >= count_b):
             return 0x00000
         elif valid_b:
             return 0x40000
-        else:
-            raise ValueError("No valid save blocks found")
+        raise ValueError("No valid save blocks found")
+
+    def compute_crc(self, block):
+        high, low = 0xFF, 0xFF
+        for i in range(len(block) - 0x14):
+            byte = block[i] ^ high
+            byte ^= (byte >> 4)
+            high = (low ^ (byte >> 3) ^ (byte << 4)) & 0xFF
+            low = (byte ^ (byte << 5)) & 0xFF
+        return (high << 8) | low
 
     def bump_save_counter(self, offset):
-        """
-        Increments the save counter at offset+0x0CF1C
-        """
         pos = offset + 0x0CF1C
         old = int.from_bytes(self.allblocks[pos:pos + 4], 'little')
         new = (old + 1) & 0xFFFFFFFF
         self.allblocks[pos:pos + 4] = new.to_bytes(4, 'little')
 
-    def save(self):
+    def validate_crc_checksums(self):
+        block_offsets = [(0x00000, 0x0CF2C), (0x40000, 0x4CF2C)]
+        for start, end in block_offsets:
+            block = self.allblocks[start:end]
+            computed_crc = self.compute_crc(block)
+            self.allblocks[start + len(block) - 2:start + len(block)] = computed_crc.to_bytes(2, 'little')
+
+    def write_to_file(self):
         while True:
             try:
-                savecheck = int(input("[1]: Save to original file\n[2]: Save to new file\n>>> "))
-                if savecheck not in [1, 2]:
+                choice = int(input("[1]: Save to original file\n[2]: Save to new file\n>>> "))
+                if choice not in [1, 2]:
                     raise ValueError
                 break
             except Exception:
-                misc.log("Invalid save option entered.", 'i')
-                print("Enter either 1 or 2.")
+                print("Invalid input. Choose 1 or 2.")
                 continue
-        self.bump_save_counter(self.get_active_block_offset())
+
+        active_offset = self.get_active_block_offset()
+        backup_offset = 0x40000 if active_offset == 0x00000 else 0x00000
+
+        self.bump_save_counter(active_offset)
+        self.bump_save_counter(backup_offset)
         self.validate_crc_checksums()
-        if savecheck == 1:
-            with open(self.path, 'wb') as f:
-                f.write(self.allblocks)
-        else:
-            fp = input("Enter filepath to save to: ")
-            with open(fp, 'wb') as f:
-                f.write(self.allblocks)
+
+        path = self.path if choice == 1 else input("New filepath: ")
+        with open(path, 'wb') as f:
+            f.write(self.allblocks)

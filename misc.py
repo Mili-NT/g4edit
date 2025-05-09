@@ -1,7 +1,8 @@
 #!/usr/bin/python3
-import os
 import logging
+import os
 from platform import system
+
 """
 Logging functions
 """
@@ -11,6 +12,8 @@ logging.basicConfig(filename='g4edit.log',
                     format='%(asctime)s - (%(levelname)s) => %(message)s\n',
                     datefmt='%d-%b-%y %H:%M:%S',
                     level=logging.NOTSET)
+
+
 def log(message, level='error', crashmsg='G4Edit encountered a fatal error.'):
     """
     :param message: The message to log
@@ -20,12 +23,12 @@ def log(message, level='error', crashmsg='G4Edit encountered a fatal error.'):
     :return: Nothing, write to log file
     """
     # Maps the first char to the integer ID of the corresponding level
-    levels = {'c':50,
-              'e':40,
-              'w':30,
-              'i':20,
-              'd':10,
-              'n':0}
+    levels = {'c': 50,
+              'e': 40,
+              'w': 30,
+              'i': 20,
+              'd': 10,
+              'n': 0}
     try:
         # If a string level is passed, it takes the first char and gets corresponding ID
         if isinstance(level, str):
@@ -53,6 +56,8 @@ def log(message, level='error', crashmsg='G4Edit encountered a fatal error.'):
     # If not, simply log and append a newline
     else:
         logging.log(setlevel, message)
+
+
 """
 Misc functions for colors and formatting
 """
@@ -60,22 +65,28 @@ colors = {"grn": "\033[1;32m",
           "blu": "\033[7;34;47m",
           "prp": "\033[1;35m",
           "whi": "\033[1;37m",
-          "end":"\033[1;m",
+          "end": "\033[1;m",
           }
 badge_color = ["\033[1;30;40m", "\033[1;37;42m", "\033[1;37;41m", "\033[1;37;44m", "\033[1;37;45m",
                "\033[2;33;40m", "\033[1;37;46m", "\033[1;37;43m", "\033[1;m"]
+
+
 def cstring(msg, color=None):
     if os.name == "nt":
         return msg
     else:
         formatted = f"{colors[color]}{msg}{colors['end']}" if color else f"{colors['whi']}{msg}{colors['end']}"
         return formatted
+
+
 def stripcolor(msg):
     for c in colors:
         msg = msg.replace(c, '')
     for c in badge_color:
         msg = msg.replace(c, ' ')
     return msg
+
+
 def get_title():
     title = """
 --------------------------------------------------------
@@ -87,6 +98,8 @@ def get_title():
 --------------------------------------------------------
 """.lstrip()
     return f"{cstring(title.rstrip(), 'prp')}\n{cstring('-----------A CLI Save Editor for Generation 4-----------', 'prp')}"
+
+
 def get_padded(string):
     uncolored = string
     for c in colors.values():
@@ -97,6 +110,8 @@ def get_padded(string):
     while len(pad) < 56:
         pad = f"{pad}-"
     return pad.replace(uncolored, string)
+
+
 def clear():
     if system().lower() == 'windows':
         os.system('cls')

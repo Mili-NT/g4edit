@@ -1,7 +1,9 @@
-import misc
 import string
 import struct
+
 import indexes
+import misc
+
 
 # Important Conversion Functions
 def char_conversion(data, encode=False, pad=None):
@@ -17,25 +19,25 @@ def char_conversion(data, encode=False, pad=None):
     """
     symbols = {
         # Reveal your secrets to me, symbols
-        171:'!',
-        208:'@',
-        192:'#',
-        168:'$',
-        210:'%',
-        222:' ',
-        173:',',
-        174:'.',
-        196:':',
-        197:';',
-        172:'?',
-        189:'+',
-        190:'-',
-        193:'=',
-        177:'/',
-        195:'~',
-        191:'*',
-        238:'♂',
-        239:'♀',
+        171: '!',
+        208: '@',
+        192: '#',
+        168: '$',
+        210: '%',
+        222: ' ',
+        173: ',',
+        174: '.',
+        196: ':',
+        197: ';',
+        172: '?',
+        189: '+',
+        190: '-',
+        193: '=',
+        177: '/',
+        195: '~',
+        191: '*',
+        238: '♂',
+        239: '♀',
     }
     # Combine all letters and symbols into with their OFFSET integer representation as a key:
     # This forms our encoded dictionary
@@ -43,7 +45,7 @@ def char_conversion(data, encode=False, pad=None):
            **{ord(x) - 28: x for x in string.ascii_lowercase},
            **symbols}
     # The decoded dictionary is literally just reversed key:value pairs
-    dec = {letter:integer for integer, letter in enc.items()}
+    dec = {letter: integer for integer, letter in enc.items()}
 
     if encode is False:
         # To decode, we first strip anything after the first detected 0xFF byte (These terminate the strings):
@@ -67,6 +69,7 @@ def char_conversion(data, encode=False, pad=None):
         # return an encoded bytearray
         return bytearray(formatted)
 
+
 def byte_conversion(data, flag, encode=False):
     """
     This function serves as a wrapper around struct.pack and struct.unpack.
@@ -81,6 +84,7 @@ def byte_conversion(data, flag, encode=False):
         return struct.unpack(flag, data)
     else:
         return bytearray(struct.pack(flag, data))
+
 
 def pokemon_conversion(pkmn_struct, encode=False):
     """
@@ -122,6 +126,7 @@ def pokemon_conversion(pkmn_struct, encode=False):
     misc.log(f"BYTES: {pkmn_struct[0x06:0x08]}", 'd')
     shift_value = ((personality_value & 0x3E000) >> 0xD) % 24
     order = indexes.shifts[shift_value][0]
+
     # Misc
     def generate_checksum():
         # Initialize the new checksum as 0
@@ -139,6 +144,7 @@ def pokemon_conversion(pkmn_struct, encode=False):
             count += 1
         # Return the new checksum bytes
         return byte_conversion(pkmn_struct[0x06:0x08], "<H")[0]
+
     # Cryptography Components
     def rand(data, i, seed):
         """
@@ -159,6 +165,7 @@ def pokemon_conversion(pkmn_struct, encode=False):
         data[i + 1] ^= bits[1]
         # return seed for future generator calls
         return seed
+
     def xor(data, seed, offset):
         """
         :param data: the entire bytearray of the pokemon
@@ -177,10 +184,12 @@ def pokemon_conversion(pkmn_struct, encode=False):
             rand(data, i, currentseed)
             # Call rand a third time to update the currentseed to the output of the PRNG
             currentseed = rand(data, i, currentseed)
+
     def crypt(data, chk):
         xor(data, chk, (8, 136))
         if len(data) > (4 * 32) + 8:
             xor(data, personality_value, (136, len(data)))
+
     # Cryptography Processes
     def decrypt():
         # First we decrypt the bytes:
@@ -192,6 +201,7 @@ def pokemon_conversion(pkmn_struct, encode=False):
         # Update the pkmn_struct with the decrypted data, and return it
         decrypted = write_to_offset(pkmn_struct, (0x08, 0x88), combine_bytestrings(deordered))
         return decrypted
+
     def encrypt():
         # First we generate the checksum to validate the data
         refreshed_checksum = generate_checksum()
@@ -203,9 +213,12 @@ def pokemon_conversion(pkmn_struct, encode=False):
         # Now we call crypt and encrypt the data
         crypt(ordered, refreshed_checksum)
         return ordered
+
     # Calls and Return
     modified_struct = encrypt() if encode else decrypt()
     return modified_struct, personality_value, checksum
+
+
 # General Conversion/Data Manipulation Functions
 def byte_to_bit(data):
     """
@@ -230,6 +243,7 @@ def byte_to_bit(data):
     elif isinstance(data, int):
         return ''.join([f"{(data >> i) & 1}" for i in range(8)])
 
+
 def bytearr_to_hexstring(bytearr):
     """
     This function converts a bytearray to a string of hex encoded data in the format you'd see in a hex editor.
@@ -245,6 +259,7 @@ def bytearr_to_hexstring(bytearr):
     """
     return ' '.join([f'{i:0>2X}' for i in bytearr])
 
+
 def combine_bytestrings(array):
     """
     This function combines an array of bytestrings into one big bytearray that can be cleanly passed to
@@ -257,6 +272,7 @@ def combine_bytestrings(array):
     for x in array:
         combined.extend(x)
     return combined
+
 
 def letter_to_index(data, decode=False):
     """
@@ -274,6 +290,7 @@ def letter_to_index(data, decode=False):
         array = upper.index(data) if len(data) == 1 else [upper.index(l) for l in data.upper()]
     return array
 
+
 def list_to_chunks(array, num_of_chunks):
     """
     :param array: The array to seperate into chunks
@@ -282,6 +299,7 @@ def list_to_chunks(array, num_of_chunks):
     """
     num_of_chunks = max(1, num_of_chunks)
     return list((array[i:i + num_of_chunks] for i in range(0, len(array), num_of_chunks)))
+
 
 def generate_pad(offset_size, value_size):
     """
@@ -306,14 +324,16 @@ def generate_pad(offset_size, value_size):
     # We get the number of 0x00s we need by multiplying the difference between the offset size end value size by 2
     # We multiply by 2 to account for the two byte character encoding scheme
     # For example, [0x61 0x61 0x61] (3 bytes) is really [0x61 0x01 0x61 0x01 0x61 0x01] (6 bytes) when encoded
-    size = offset_size-value_size*2
-    size = size-1 if size == 1 else size
+    size = offset_size - value_size * 2
+    size = size - 1 if size == 1 else size
     # Strings that are of the max size (so a trainer name that is 7 bytes, 14 bytes encoded) is terminated with 1 0xFF
     # Otherwise, they are double terminated.
     if size == 0:
         return [0xFF] + [0x00 for _ in range(size)]
     else:
         return [0xFF, 0xFF] + [0x00 for _ in range(size)]
+
+
 # Read/Write Functions
 def read_from_offset(whole, offset):
     """
@@ -328,6 +348,7 @@ def read_from_offset(whole, offset):
         return whole[offset]
     else:
         return whole[offset[0]:offset[1]]
+
 
 def write_to_offset(data, offset, value):
     """
@@ -352,6 +373,7 @@ def write_to_offset(data, offset, value):
             count += 1
     return data
 
+
 def get_index(index, element, from_val=False):
     """
     This function fetches an element from a dictionary, given both a dictionary and element.
@@ -371,6 +393,7 @@ def get_index(index, element, from_val=False):
             return index[element]
     except Exception:
         return None
+
 
 def is_valid(index, element, is_val=False):
     """

@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 import os
 import sys
-import misc
+
 import classes
+import misc
 
 """
 Bugs
@@ -11,6 +12,8 @@ Bugs
 """
 TODO list
 """
+
+
 # High Priority:
 # TODO: FINISH STATS SUBEDITOR
 # TODO: PP Up implementation
@@ -19,8 +22,7 @@ TODO list
 # TODO: Inventory
 # Not as High Priority:
 # TODO: Quickbinds editor: max health, max level, PP restore, etc.
-# TODO: Make CLI not as painful (Restructing editing to be classes?)
-
+# TODO: Make CLI not as painful
 
 # IMPORTANT FUNCTIONS
 def load_file(fp):
@@ -36,7 +38,9 @@ def load_file(fp):
             contents = f.read()
     except Exception as e:
         misc.log(e, 'critical', crashmsg="Fatal error encountered loading file with load_file().")
-    return classes.save(contents, fp)
+    return classes.Save(contents, fp)
+
+
 def main(filepath=None):
     """
     The main function for the program. Takes an optional parameter `filepath`, so the user can specify what file to load
@@ -58,12 +62,14 @@ def main(filepath=None):
         playersav = load_file(filepath)
         try:
             misc.clear()
-            interface = classes.interface(playersav)
+            classes.Interface(playersav)
         except Exception as e:
             misc.log(e, 'c', "Critical Error loading interface object.")
     except KeyboardInterrupt:
         misc.log("User closed program via keyboard interrupt", 'info')
         exit()
+
+
 # RUNPOINT
 if __name__ == '__main__':
     try:
