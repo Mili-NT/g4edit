@@ -97,11 +97,11 @@ def pokemon_conversion(pkmn_struct, encode=False):
     """
     ~~~~~ Pre-Cryptography ~~~~~
     There are 3 important components prior to performing cryptographic operations:
-    [1]: The checksum: A 2 byte integer loctated at 0x06:0x08 that is used to verify the data after encryption, and 
+    [1]: The checksum: A 2 byte integer located at 0x06:0x08 that is used to verify the data after encryption, and 
     serves as the INITIAL seed to the decryption function.
     
     [2]: The personality value (PV/PID): A 4-byte (32bit) integer that contains data about the gender, nature, 
-    shinyness, etc. It is used to get the shift value, which is calulated to find the order of the 32 byte data 
+    shininess, etc. It is used to get the shift value, which is calulated to find the order of the 32 byte data 
     blocks for shuffling.
     
     [3]: The shift value: Calculated by first performing a bitwise AND on the PV and 253952, then taking the resulting
@@ -122,13 +122,16 @@ def pokemon_conversion(pkmn_struct, encode=False):
     """
     personality_value = byte_conversion(pkmn_struct[0x00:0x04], "<I")[0]
     checksum = byte_conversion(pkmn_struct[0x06:0x08], "<H")[0]
-    misc.log(f"CHK: {checksum}", 'd')
+    misc.log(f"CHECK: {checksum}", 'd')
     misc.log(f"BYTES: {pkmn_struct[0x06:0x08]}", 'd')
     shift_value = ((personality_value & 0x3E000) >> 0xD) % 24
     order = indexes.shifts[shift_value][0]
 
     # Misc
     def generate_checksum():
+        """
+        This function calculates the checksum for the pkmn struct. Different than the CRC-16 checksum used for the blocks.
+        """
         # Initialize the new checksum as 0
         new_checksum = 0
         # For every two byte word between 0x08 and 0x88, we convert it to a 16bit int and add it to new_checksum
@@ -186,6 +189,13 @@ def pokemon_conversion(pkmn_struct, encode=False):
             currentseed = rand(data, i, currentseed)
 
     def crypt(data, chk):
+        """
+        This function applies the cryptographic work to the pokemon struct.
+
+        :param data: Bytearr representing the pokemon struct
+        :param chk:  16-bit integer checksum to kickstart the LCPRNG
+        :return:
+        """
         xor(data, chk, (8, 136))
         if len(data) > (4 * 32) + 8:
             xor(data, personality_value, (136, len(data)))
