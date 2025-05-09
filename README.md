@@ -39,7 +39,9 @@ With it you can modify:
 ## Resources:
 
 [1]. https://bulbapedia.bulbagarden.net/wiki/Save_data_structure_(Generation_IV)
+
 [2]. https://github.com/pret/pokeplatinum
+
 [3]. Leaked JP platinum source code (its out there)
 
 ## Usage:
